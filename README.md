@@ -80,4 +80,4 @@ test/                  node:test тестүүд (test/e2e — жинхэнэ с�
 - [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md): админы заавар (өдөр тутмын хэрэглээ)
 - [docs/QPAY_SETUP.md](docs/QPAY_SETUP.md): QPay тохиргоо
 - [docs/SMS_SETUP.md](docs/SMS_SETUP.md): SMS gateway тохиргоо (WeSend бол `SMS_PROVIDER=wesend` + `SMS_API_KEY` л хангалттай)
-- [docs/DEPLOY.md](docs/DEPLOY.md): Railway (Docker, push бүрд тест + QPay/WeSend шалгалт) эсвэл өөрийн VPS-д байршуулах, Datacom-оос домэйн холбох, SSL, нөөц хуулбар, хүлээлгэн өгөх шалгах хуудас
+- [docs/DEPLOY.md](docs/DEPLOY.md): Render эсвэл Railway (Docker, push бүрд тест + QPay/WeSend шалгалт) эсвэл өөрийн VPS-д байршуулах, Datacom-оос домэйн холбох, SSL, нөөц хуулбар, хүлээлгэн өгөх шалгах хуудас

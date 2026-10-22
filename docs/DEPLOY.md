@@ -2,8 +2,31 @@
 
 Өгөгдөл нь серверийн диск дээрх SQLite файлд хадгалагдах тул Vercel зэрэг serverless орчинд биш, байнгын дисктэй сервер дээр байршуулна. Хоёр арга бий:
 
-- **Railway (Docker)**: GitHub-д push хийхэд тест ажиллаж, QPay, WeSend шалгагдаад автоматаар шинэчлэгдэнэ. Доорх эхний хэсгийг үзнэ үү.
+- **Render** эсвэл **Railway** (Docker): GitHub-д push хийхэд тест ажиллаж, QPay, WeSend шалгагдаад автоматаар шинэчлэгдэнэ. Доорх эхний хоёр хэсгийг үзнэ үү.
 - **Өөрийн VPS**: Ubuntu, nginx, systemd. 1-р хэсгээс эхэлнэ.
+
+## Render (Docker)
+
+`render.yaml` (Blueprint) нь серверийг бүхэлд нь тодорхойлно:
+- Starter багц: 0.5 CPU, 512 MB, сард ~$7;
+- Сингапур бүс;
+- `/data` дээр 1 GB диск;
+- deploy-ийн өмнөх шалгалт `scripts/check-services.js`;
+- `/healthz` шалгалт;
+- GitHub Actions амжилттай болсны дараа л deploy хийх тохиргоо (`autoDeployTrigger: checksPass`).
+
+Push хийхэд юу болох дараалал нь доорх Railway хэсэгтэй ижил.
+
+1. https://render.com-д GitHub-аараа бүртгүүлнэ. Workspace багцаас **Hobby ($0)**-г сонгоно, Pro шаардлагагүй. **Billing** хэсэгт карт нэмнэ (Starter сервер болон дискэнд).
+2. **New → Blueprint** → `shaman-time-booking` repo-г сонгоно. Хэрэв жагсаалтад харагдахгүй бол **Configure GitHub App**-аар Render-т repo-д хандах эрх өгнө. **Branch** нь deploy хийх салбар (`main` эсвэл `nextjs`).
+3. Render `render.yaml`-ийг уншаад нууц утгуудыг асууна:
+   - `BASE_URL`: сайтын https хаяг. Домэйн холбоогүй бол эхлээд `https://time-booking.onrender.com` гэж бичээд, домэйн холбосны дараа солино. Render-ийн өгсөн хаяг өөр байвал түүнийг бичнэ.
+   - `ADMIN_PASSWORD`: 10+ тэмдэгт. Анхны deploy-д админ үүсгэхэд ашиглагдана.
+   - `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, `QPAY_INVOICE_CODE`, `SMS_API_KEY`: `.env`-ээс хуулна.
+
+   `SESSION_SECRET`-ийг Render өөрөө үүсгэнэ.
+4. **Deploy Blueprint** дарна. Лог дээр `✓ QPay`, `✓ SMS` мөрүүд гарч, дараа нь сайт асна.
+5. **Домэйн**: service → **Settings → Custom Domains** → домэйнээ нэмнэ. Render-ийн өгсөн DNS бичлэгийг домэйнээ бүртгүүлсэн газрын DNS тохиргоонд нэмнэ. SSL-ийг Render өөрөө гаргана. Дараа нь **Environment** хэсгээс `BASE_URL`-ийг шинэ хаягаар солино.
 
 ## Railway (Docker)
 
