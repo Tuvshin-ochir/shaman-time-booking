@@ -1,9 +1,9 @@
 // Usage: npm run admin:password -- <username> <password>
 // Creates the admin user or resets its password.
-const fs = require('node:fs');
-const path = require('node:path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const envFile = path.join(__dirname, '..', '.env');
+const envFile = path.join(import.meta.dirname, '..', '.env');
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 
 const [username, password] = process.argv.slice(2);
@@ -16,9 +16,11 @@ if (password.length < 10) {
   process.exit(1);
 }
 
-const config = require('../src/config');
-const database = require('../src/db');
+// Imported after .env is loaded: the config reads it when the module loads.
+const { default: config } = await import('../src/config.js');
+const database = await import('../src/db.js');
+const auth = await import('../src/lib/auth.js');
 database.init(config.dataDir);
-require('../src/lib/auth').setPassword(username, password);
+auth.setPassword(username, password);
 database.close();
 console.log(`«${username}» админы нууц үгийг тохирууллаа.`);

@@ -1,18 +1,25 @@
-const path = require('node:path');
-const crypto = require('node:crypto');
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { shared } from './lib/shared.js';
 
+// Next.js loads .env itself (next dev / next start); scripts and tests load it
+// or set the variables before importing this module.
 const env = process.env;
 const isProd = env.NODE_ENV === 'production';
 const port = Number(env.PORT) || 3000;
+// `next build` evaluates server modules without the server's .env, so missing
+// settings must not stop the build; they are checked again when the server starts.
+const isBuild = env.NEXT_PHASE === 'phase-production-build';
 
 function fail(message) {
+  if (isBuild) return undefined;
   throw new Error(`[config] ${message}`);
 }
 
 let sessionSecret = env.SESSION_SECRET;
 if (!sessionSecret) {
   if (isProd) fail('SESSION_SECRET заавал тохируулна уу (.env).');
-  sessionSecret = crypto.randomBytes(32).toString('hex');
+  sessionSecret = shared('devSessionSecret', () => crypto.randomBytes(32).toString('hex'));
 }
 
 const qpayMode = (env.QPAY_MODE || 'mock').toLowerCase();
@@ -32,11 +39,11 @@ function parseJson(name, fallback) {
   }
 }
 
-module.exports = {
+export default {
   isProd,
   port,
   baseUrl: (env.BASE_URL || `http://localhost:${port}`).replace(/\/+$/, ''),
-  dataDir: path.resolve(env.DATA_DIR || path.join(__dirname, '..', 'data')),
+  dataDir: path.resolve(/*turbopackIgnore: true*/ env.DATA_DIR || path.join(process.cwd(), 'data')),
   sessionSecret,
   backupKeep: Number(env.BACKUP_KEEP) || 14,
   admin: {

@@ -3,20 +3,23 @@
   "version": "1.0.0",
   "private": true,
   "description": "Цаг захиалгын систем: нийтийн сайт, QPay төлбөр, SMS мэдэгдэл, админ самбар",
-  "main": "server.js",
   "engines": {
     "node": ">=22.16"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "test": "node --test test/*.test.js",
+    "test:e2e": "NEXT_DIST_DIR=.next-e2e next build && NEXT_DIST_DIR=.next-e2e node --test test/e2e/*.test.js",
     "admin:password": "node scripts/set-password.js",
     "backup": "node scripts/backup.js",
     "og-image": "node scripts/og-image.js"
   },
   "dependencies": {
-    "ejs": "3.1.10",
-    "express": "^5.1.0"
-  }
+    "next": "^16.4.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "type": "module"
 }

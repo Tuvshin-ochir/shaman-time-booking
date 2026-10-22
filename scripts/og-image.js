@@ -3,15 +3,15 @@
 // PNG icons with headless Chrome, using the business name from the database.
 // Needs Google Chrome/Chromium (set CHROME_PATH if it is not found).
 // You can also simply replace public/img/og.jpg with your own photo (1200x630, < 300 KB).
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
-const envFile = path.join(__dirname, '..', '.env');
+const envFile = path.join(import.meta.dirname, '..', '.env');
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(import.meta.dirname, '..');
 const OUT = path.join(ROOT, 'public', 'img');
 
 function findChrome() {
@@ -28,16 +28,17 @@ function findChrome() {
   return found;
 }
 
-function businessInfo() {
+async function businessInfo() {
+  const settings = await import('../src/lib/settings.js');
   try {
-    const config = require('../src/config');
-    const database = require('../src/db');
+    const { default: config } = await import('../src/config.js');
+    const database = await import('../src/db.js');
     database.init(config.dataDir);
-    const business = require('../src/lib/settings').get('business');
+    const business = settings.get('business');
     database.close();
     return business;
   } catch {
-    return require('../src/lib/settings').DEFAULTS.business;
+    return settings.DEFAULTS.business;
   }
 }
 
@@ -106,7 +107,7 @@ function toJpeg(png, jpg) {
 
 const chrome = findChrome();
 fs.mkdirSync(OUT, { recursive: true });
-const business = businessInfo();
+const business = await businessInfo();
 const ogPng = path.join(OUT, 'og.png');
 render(chrome, ogHtml(business), 1200, 630, ogPng);
 toJpeg(ogPng, path.join(OUT, 'og.jpg'));

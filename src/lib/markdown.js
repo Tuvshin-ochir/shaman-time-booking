@@ -2,7 +2,7 @@
 // Supports: # / ## / ### headings, paragraphs (single newlines become <br>),
 // - and 1. lists (nested by indentation), > quotes, | tables |, **bold**,
 // *italic*, `code` and bare http(s) links. Everything is HTML-escaped first.
-const { escapeHtml } = require('./http');
+import { escapeHtml } from './http.js';
 
 function inline(text) {
   const codes = [];
@@ -109,4 +109,4 @@ function render(markdown) {
   return { title, toc, html: html.join('\n') };
 }
 
-module.exports = { render, inline };
+export { render, inline };

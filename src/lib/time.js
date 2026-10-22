@@ -51,4 +51,4 @@ function localToEpoch(dateStr, minutes) {
   return Date.parse(`${dateStr}T00:00:00Z`) - UB_OFFSET_MS + minutes * 60000;
 }
 
-module.exports = { nowLocal, isValidDate, addDays, weekday, toMin, fromMin, localToEpoch, DAY_MS };
+export { nowLocal, isValidDate, addDays, weekday, toMin, fromMin, localToEpoch, DAY_MS };

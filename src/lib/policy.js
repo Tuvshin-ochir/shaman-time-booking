@@ -1,7 +1,7 @@
 // Cancellation & refund policy page: intro, coloured key-rule cards and
 // numbered detail sections. Edited in the admin home page editor.
-const settings = require('./settings');
-const { nowLocal } = require('./time');
+import * as settings from './settings.js';
+import { nowLocal } from './time.js';
 
 const TONES = [
   ['good', 'Ногоон — боломжтой'],
@@ -110,4 +110,4 @@ function save(body) {
   settings.set('policy', { ...next, updated_at: nowLocal().date });
 }
 
-module.exports = { TONES, MAX_HIGHLIGHTS, MAX_SECTIONS, get, save };
+export { TONES, MAX_HIGHLIGHTS, MAX_SECTIONS, get, save };

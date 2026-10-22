@@ -1,9 +1,9 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { backup } = require('node:sqlite');
-const config = require('../config');
-const { db } = require('../db');
-const { nowLocal } = require('./time');
+import fs from 'node:fs';
+import path from 'node:path';
+import { backup } from 'node:sqlite';
+import config from '../config.js';
+import { db } from '../db.js';
+import { nowLocal } from './time.js';
 
 const FILE_RE = /^app-\d{4}-\d{2}-\d{2}\.db$/;
 
@@ -41,4 +41,4 @@ async function dailyIfDue(now = Date.now()) {
   return file;
 }
 
-module.exports = { createBackup, dailyIfDue, backupDir };
+export { createBackup, dailyIfDue, backupDir };

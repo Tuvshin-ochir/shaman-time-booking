@@ -1,14 +1,16 @@
-require('./helpers');
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { db } = require('../src/db');
-const settings = require('../src/lib/settings');
-const slots = require('../src/lib/slots');
-const bookings = require('../src/lib/bookings');
-const qpay = require('../src/lib/qpay');
-const { normalizePhone } = require('../src/lib/phone');
-const { transliterate } = require('../src/lib/sms');
-const { localToEpoch, fromMin, nowLocal } = require('../src/lib/time');
+import './helpers.js';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { db } from '../src/db.js';
+import * as settings from '../src/lib/settings.js';
+import * as slots from '../src/lib/slots.js';
+import * as bookings from '../src/lib/bookings.js';
+import * as qpay from '../src/lib/qpay.js';
+import * as notify from '../src/lib/notify.js';
+import { formatWhen } from '../src/i18n/index.js';
+import { normalizePhone } from '../src/lib/phone.js';
+import { transliterate } from '../src/lib/sms.js';
+import { localToEpoch, fromMin, nowLocal } from '../src/lib/time.js';
 
 // 2030-01-06 is a Sunday; 2030-01-07 a Monday.
 const SUNDAY = '2030-01-06';
@@ -29,7 +31,7 @@ function resetSchedule(overrides = {}) {
     capacity: 1,
     ...overrides,
   });
-  db().exec('DELETE FROM booking_events; DELETE FROM sms_log; DELETE FROM payments; DELETE FROM bookings; DELETE FROM holidays;');
+  db().exec('DELETE FROM booking_events; DELETE FROM sms_log; DELETE FROM payments; DELETE FROM bookings; DELETE FROM holidays; DELETE FROM time_blocks;');
 }
 
 function service(duration = 30, extra = {}) {
@@ -81,6 +83,27 @@ test('available times respect hours, break, lead time and holidays', () => {
 
   db().prepare('INSERT INTO holidays (date, note) VALUES (?, ?)').run(MONDAY, 'test');
   assert.deepEqual(slots.availableTimes(s30, MONDAY, { now: NOW }), []);
+});
+
+test('hours closed on one date are not bookable; the rest of the day and other days stay open', () => {
+  resetSchedule();
+  const s30 = service(30);
+  const s60 = service(60);
+  db()
+    .prepare('INSERT INTO time_blocks (date, start_min, end_min, note, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(MONDAY, 11 * 60, 11 * 60 + 30, 'Гадуур', NOW);
+  assert.deepEqual(slots.availableTimes(s30, MONDAY, { now: NOW }).map(fromMin), ['09:00', '09:30', '10:30', '11:30']);
+  // A 60-minute service starting at 10:30 would run into the closed half hour.
+  assert.deepEqual(slots.availableTimes(s60, MONDAY, { now: NOW }).map(fromMin), ['09:00']);
+  assert.deepEqual(slots.availableTimes(s30, '2030-01-14', { now: NOW }).map(fromMin), ['09:00', '09:30', '10:30', '11:00', '11:30']);
+  assert.throws(() => hold(s30, '11:00', '99110003'), { code: 'slot_taken' });
+
+  // Closing every open hour leaves the day without free times.
+  db()
+    .prepare('INSERT INTO time_blocks (date, start_min, end_min, note, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(MONDAY, 9 * 60, 12 * 60, null, NOW);
+  const monday = slots.availableDays(s30, { now: NOW }).find((d) => d.date === MONDAY);
+  assert.deepEqual([monday.closed, monday.free], [false, 0]);
 });
 
 test('a held slot cannot be booked twice, and is released after the hold expires', () => {
@@ -235,4 +258,66 @@ test('reminders go out once, the day before, only for bookings made in advance',
   assert.equal(await bookings.sendReminders(dayBefore), 1);
   assert.equal(await bookings.sendReminders(dayBefore + 5 * MIN), 0); // only once
   assert.equal(nowLocal(dayBefore).date, SUNDAY);
+});
+
+test('special services: only a day is chosen, any open day, and no time slot is taken', async () => {
+  resetSchedule();
+  const regular = service(30);
+  const info = db()
+    .prepare(`INSERT INTO services (kind, name, price, deposit, duration_min, active, sort, created_at) VALUES ('special', ?, ?, NULL, 0, 1, 99, ?)`)
+    .run('Тусгай засал', 50000, Date.now());
+  const special = bookings.getService(Number(info.lastInsertRowid));
+  assert.ok(slots.isSpecial(special));
+  assert.deepEqual(slots.availableTimes(special, MONDAY, { now: NOW }), []);
+
+  // Every open day of the window is bookable; Sunday (day off) and holidays are not.
+  const holiday = '2030-01-14';
+  db().prepare('INSERT INTO holidays (date, note) VALUES (?, ?)').run(holiday, 'Баяр');
+  const days = slots.availableDays(special, { now: NOW });
+  assert.deepEqual(
+    days.filter((d) => d.free).map((d) => d.date),
+    ['2030-01-07', '2030-01-21', '2030-01-28', '2030-02-04']
+  );
+  assert.equal(days.find((d) => d.date === SUNDAY).closed, true);
+  assert.throws(() => bookings.createHold({ serviceId: special.id, date: SUNDAY, name: 'Бат', phone: '99110020', now: NOW }), { code: 'day_closed' });
+  assert.throws(() => bookings.createHold({ serviceId: special.id, date: holiday, name: 'Бат', phone: '99110020', now: NOW }), { code: 'day_closed' });
+  // Today stops being bookable once closing time (minus the lead time) has passed.
+  assert.equal(slots.dayIsBookable(MONDAY, { now: localToEpoch(MONDAY, 10 * 60) }), true);
+  assert.equal(slots.dayIsBookable(MONDAY, { now: localToEpoch(MONDAY, 11 * 60 + 30) }), false);
+
+  // No time is needed (a sent one is ignored); several customers can take the same day.
+  const a = bookings.createHold({ serviceId: special.id, date: MONDAY, name: 'Бат', phone: '99110020', now: NOW });
+  const b = bookings.createHold({ serviceId: special.id, date: MONDAY, time: '09:00', name: 'Дорж', phone: '99110021', now: NOW });
+  for (const x of [a, b]) {
+    assert.equal(x.day_only, 1);
+    assert.equal(x.start_min, 0);
+    assert.equal(x.end_min, 0);
+    assert.equal(x.amount_due, 50000);
+  }
+  // Regular times of that day stay free.
+  assert.deepEqual(slots.availableTimes(regular, MONDAY, { now: NOW }).map(fromMin), ['09:00', '09:30', '10:30', '11:00', '11:30']);
+  const timed = hold(regular, '09:00', '99110022');
+
+  // Texts: no time anywhere, and the SMS drops {time} together with its case ending.
+  assert.equal(formatWhen(a), '1-р сарын 7, Даваа');
+  assert.equal(formatWhen(timed), '1-р сарын 7, Даваа, 09:00');
+  assert.equal(bookings.whenText(a), MONDAY);
+  const template = 'Маргааш {date} {time}-д таны цаг. Цаг: {date} {time}.';
+  assert.equal(notify.render(template, notify.vars(a)), 'Маргааш 2030.01.07 таны цаг. Цаг: 2030.01.07.');
+  assert.equal(notify.render(template, notify.vars(timed)), 'Маргааш 2030.01.07 09:00-д таны цаг. Цаг: 2030.01.07 09:00.');
+
+  // The admin can book any day (closed ones too) and move it to another day.
+  const manual = bookings.createManual({ serviceId: special.id, date: SUNDAY, name: 'Сүх', phone: '99110023', now: NOW });
+  assert.equal(manual.day_only, 1);
+  assert.equal(manual.status, 'confirmed');
+  const moved = bookings.reschedule(manual.id, { date: '2030-01-21', time: '', now: NOW });
+  assert.equal(moved.date, '2030-01-21');
+  assert.equal(moved.start_min, 0);
+  assert.equal(moved.end_min, 0);
+
+  // The reminder goes out the day before at opening time (09:00).
+  const early = bookings.createManual({ serviceId: special.id, date: MONDAY, name: 'Төмөр', phone: '99110024', now: NOW - 3 * 86400000 });
+  db().prepare('UPDATE bookings SET confirmed_at = ? WHERE id = ?').run(NOW - 3 * 86400000, early.id);
+  assert.equal(await bookings.sendReminders(localToEpoch(SUNDAY, 8 * 60 + 55)), 0);
+  assert.equal(await bookings.sendReminders(localToEpoch(SUNDAY, 9 * 60 + 5)), 1);
 });

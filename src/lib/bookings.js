@@ -1,12 +1,13 @@
-const crypto = require('node:crypto');
-const config = require('../config');
-const { db, tx } = require('../db');
-const settings = require('./settings');
-const slots = require('./slots');
-const qpay = require('./qpay');
-const notify = require('./notify');
-const { normalizePhone } = require('./phone');
-const { isValidDate, toMin, fromMin, nowLocal, addDays, localToEpoch, DAY_MS } = require('./time');
+import crypto from 'node:crypto';
+import { shared } from './shared.js';
+import config from '../config.js';
+import { db, tx } from '../db.js';
+import * as settings from './settings.js';
+import * as slots from './slots.js';
+import * as qpay from './qpay.js';
+import * as notify from './notify.js';
+import { normalizePhone } from './phone.js';
+import { isValidDate, toMin, fromMin, nowLocal, addDays, localToEpoch, DAY_MS } from './time.js';
 
 class BookingError extends Error {
   constructor(code, message) {
@@ -72,6 +73,11 @@ function parseSlot(date, time) {
   return start;
 }
 
+// "2026-10-30 14:00", or just the date for a day-only booking (logs, invoices).
+function whenText(booking) {
+  return booking.day_only ? booking.date : `${booking.date} ${fromMin(booking.start_min)}`;
+}
+
 function insertBooking(fields) {
   const now = Date.now();
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -134,12 +140,15 @@ function createHold({ serviceId, date, time, name, phone, note, ip = null, now =
   const customerName = cleanName(name);
   const customerPhone = normalizePhone(phone);
   if (!customerPhone) throw new BookingError('phone');
-  const start = parseSlot(date, time);
+  if (!isValidDate(date)) throw new BookingError('date');
 
   const released = [];
   const booking = tx(() => {
     const service = getService(serviceId);
     if (!service) throw new BookingError('service');
+    // Special services are booked for a day; the time is not asked.
+    const dayOnly = slots.isSpecial(service);
+    const start = dayOnly ? 0 : parseSlot(date, time);
 
     // One unpaid hold per phone number: choosing a new time releases the old one.
     const previous = db()
@@ -151,7 +160,11 @@ function createHold({ serviceId, date, time, name, phone, note, ip = null, now =
       released.push(id);
     }
 
-    if (!slots.availableTimes(service, date, { now }).includes(start)) throw new BookingError('slot_taken');
+    if (dayOnly) {
+      if (!slots.dayIsBookable(date, { now })) throw new BookingError('day_closed');
+    } else if (!slots.availableTimes(service, date, { now }).includes(start)) {
+      throw new BookingError('slot_taken');
+    }
 
     const holdMinutes = settings.get('schedule').hold_minutes;
     const created = insertBooking({
@@ -161,7 +174,8 @@ function createHold({ serviceId, date, time, name, phone, note, ip = null, now =
       amount_due: amountDue(service),
       date,
       start_min: start,
-      end_min: start + service.duration_min,
+      end_min: dayOnly ? 0 : start + service.duration_min,
+      day_only: dayOnly ? 1 : 0,
       customer_name: customerName,
       phone: customerPhone,
       note: cleanNote(note),
@@ -169,7 +183,7 @@ function createHold({ serviceId, date, time, name, phone, note, ip = null, now =
       hold_expires_at: now + holdMinutes * 60000,
       ip,
     });
-    logEvent(created.id, 'created', `${date} ${fromMin(start)}, ${holdMinutes} мин барьсан`, 'customer');
+    logEvent(created.id, 'created', `${whenText(created)}, ${holdMinutes} мин барьсан`, 'customer');
     return created;
   });
 
@@ -192,7 +206,7 @@ async function startPayment(booking) {
     invoice = await qpay.createInvoice({
       senderInvoiceNo,
       amount: booking.amount_due,
-      description: `${business.name}: ${booking.service_name}, ${booking.date} ${fromMin(booking.start_min)} (${booking.code})`.slice(0, 250),
+      description: `${business.name}: ${booking.service_name}, ${whenText(booking)} (${booking.code})`.slice(0, 250),
       callbackUrl: `${config.baseUrl}/qpay/callback?b=${encodeURIComponent(booking.token)}`,
       receiverCode: booking.phone,
     });
@@ -301,7 +315,7 @@ function applyPayment(paymentId, result, now = Date.now()) {
   return res;
 }
 
-const lastCheck = new Map();
+const lastCheck = shared('paymentLastCheck', () => new Map());
 
 // Asks QPay whether any open invoice of this booking is paid. Throttled per
 // booking because both the payment page and the callback can trigger it.
@@ -370,7 +384,9 @@ async function sendReminders(now = Date.now()) {
     .all(tomorrow);
   let sent = 0;
   for (const booking of candidates) {
-    const startsAt = localToEpoch(booking.date, booking.start_min);
+    // A day-only booking is reminded from the opening time of the day before.
+    const startMin = booking.day_only ? (slots.hoursFor(booking.date) || { start: 9 * 60 }).start : booking.start_min;
+    const startsAt = localToEpoch(booking.date, startMin);
     const remindAt = startsAt - DAY_MS;
     if (now < remindAt) continue;
     if ((booking.confirmed_at || booking.created_at) > remindAt) continue;
@@ -390,15 +406,18 @@ function createManual({ serviceId, date, time, name, phone, note, paidAmount = 0
   const customerName = cleanName(name);
   const customerPhone = normalizePhone(phone);
   if (!customerPhone) throw new BookingError('phone');
-  const start = parseSlot(date, time);
+  if (!isValidDate(date)) throw new BookingError('date');
   const paid = Math.max(0, Math.round(Number(paidAmount) || 0));
 
   return tx(() => {
     const service = getService(serviceId, { activeOnly: false });
     if (!service) throw new BookingError('service');
-    const end = start + service.duration_min;
+    // The admin may book a special service on any day, closed days included.
+    const dayOnly = slots.isSpecial(service);
+    const start = dayOnly ? 0 : parseSlot(date, time);
+    const end = dayOnly ? 0 : start + service.duration_min;
     if (end > 24 * 60) throw new BookingError('time');
-    if (!force && !slots.slotIsFree(date, start, end, { now })) throw new BookingError('slot_taken');
+    if (!dayOnly && !force && !slots.slotIsFree(date, start, end, { now })) throw new BookingError('slot_taken');
     const booking = insertBooking({
       service_id: service.id,
       service_name: service.name,
@@ -407,6 +426,7 @@ function createManual({ serviceId, date, time, name, phone, note, paidAmount = 0
       date,
       start_min: start,
       end_min: end,
+      day_only: dayOnly ? 1 : 0,
       customer_name: customerName,
       phone: customerPhone,
       note: cleanNote(note),
@@ -475,19 +495,24 @@ function markRefunded(id, { actor = 'admin', now = Date.now() } = {}) {
 }
 
 function reschedule(id, { date, time, force = false, actor = 'admin', now = Date.now() }) {
-  const start = parseSlot(date, time);
+  if (!isValidDate(date)) throw new BookingError('date');
   return tx(() => {
     const booking = getById(id);
     if (!booking) throw new BookingError('not_found');
     if (!['confirmed', 'pending'].includes(effectiveStatus(booking, now))) throw new BookingError('not_active');
+    // A day-only booking moves to another day; it has no time.
+    const start = booking.day_only ? 0 : parseSlot(date, time);
     const end = start + (booking.end_min - booking.start_min);
     if (end > 24 * 60) throw new BookingError('time');
-    if (!force && !slots.slotIsFree(date, start, end, { now, excludeId: id })) throw new BookingError('slot_taken');
+    if (!booking.day_only && !force && !slots.slotIsFree(date, start, end, { now, excludeId: id })) {
+      throw new BookingError('slot_taken');
+    }
     db()
       .prepare(`UPDATE bookings SET date = ?, start_min = ?, end_min = ?, reminder_sent_at = NULL, updated_at = ? WHERE id = ?`)
       .run(date, start, end, now, id);
-    logEvent(id, 'rescheduled', `${booking.date} ${fromMin(booking.start_min)} → ${date} ${fromMin(start)}`, actor);
-    return getById(id);
+    const moved = getById(id);
+    logEvent(id, 'rescheduled', `${whenText(booking)} → ${whenText(moved)}`, actor);
+    return moved;
   });
 }
 
@@ -498,12 +523,12 @@ function setAdminNote(id, note, actor = 'admin') {
   logEvent(id, 'note', null, actor);
 }
 
-module.exports = {
-  BookingError,
+export {  BookingError,
   getById,
   getByToken,
   getService,
   amountDue,
+  whenText,
   effectiveStatus,
   logEvent,
   createHold,

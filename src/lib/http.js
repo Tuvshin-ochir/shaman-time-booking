@@ -1,68 +1,27 @@
-const config = require('../config');
-
-function cookies(req, res, next) {
-  req.cookies = {};
-  for (const part of String(req.headers.cookie || '').split(';')) {
-    const index = part.indexOf('=');
-    if (index < 0) continue;
-    const name = part.slice(0, index).trim();
-    try {
-      req.cookies[name] = decodeURIComponent(part.slice(index + 1).trim());
-    } catch {
-      // ignore malformed cookie values
-    }
-  }
-  next();
-}
-
-// QPay returns bank logos as remote https images and the QR as a data: URI;
-// the admin image editor previews picked files through blob: URLs.
-const CSP = [
-  "default-src 'self'",
-  "img-src 'self' data: blob: https:",
-  "style-src 'self'",
-  "script-src 'self'",
-  "connect-src 'self'",
-  "font-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-].join('; ');
-
-function securityHeaders(req, res, next) {
-  res.setHeader('Content-Security-Policy', CSP);
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (config.isProd) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
-  next();
-}
+import { shared } from './shared.js';
 
 // Small fixed-window in-memory limiter; enough for a single-process app.
-function rateLimit({ windowMs, max, key = (req) => req.ip, onLimit }) {
-  const hits = new Map();
-  setInterval(() => {
+// limiter(name, { windowMs, max })(key) -> { ok, retryAfter }
+function limiter(name, { windowMs, max }) {
+  const hits = shared(`rateLimit:${name}`, () => new Map());
+  return (key) => {
     const now = Date.now();
-    for (const [k, v] of hits) if (v.reset <= now) hits.delete(k);
-  }, windowMs).unref();
-
-  return (req, res, next) => {
-    const now = Date.now();
-    const k = key(req);
-    let entry = hits.get(k);
+    if (hits.size > 10000) for (const [k, v] of hits) if (v.reset <= now) hits.delete(k);
+    let entry = hits.get(key);
     if (!entry || entry.reset <= now) {
       entry = { count: 0, reset: now + windowMs };
-      hits.set(k, entry);
+      hits.set(key, entry);
     }
     entry.count++;
-    if (entry.count > max) {
-      res.setHeader('Retry-After', Math.ceil((entry.reset - now) / 1000));
-      if (onLimit) return onLimit(req, res);
-      return res.status(429).send('Too many requests');
-    }
-    next();
+    return { ok: entry.count <= max, retryAfter: Math.ceil((entry.reset - now) / 1000) };
   };
+}
+
+// Client address behind nginx on the same host: nginx appends the real address
+// to X-Forwarded-For, so the last entry is the one we can trust.
+function clientIp(headers) {
+  const forwarded = String(headers.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean);
+  return forwarded.at(-1) || headers.get('x-real-ip') || '127.0.0.1';
 }
 
 function escapeHtml(value) {
@@ -74,14 +33,4 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-// Plain text with blank-line paragraphs -> escaped HTML.
-function paragraphs(text) {
-  return String(text || '')
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
-    .join('\n');
-}
-
-module.exports = { cookies, securityHeaders, rateLimit, escapeHtml, paragraphs };
+export { limiter, clientIp, escapeHtml };

@@ -1,12 +1,12 @@
 # Серверт байршуулах
 
-Жишээ: Ubuntu 22.04/24.04 VPS, домэйн `www.example.mn`. Апп нь Node.js процессоор ажиллаж, түүний өмнө nginx (SSL, gzip) байрлана.
+Жишээ: Ubuntu 22.04/24.04 VPS, домэйн `www.example.mn` (Datacom-д бүртгэлтэй). Апп нь Next.js сервер (`next start`) болж ажиллаж, түүний өмнө nginx (SSL, gzip) байрлана. Өгөгдөл нь серверийн диск дээрх SQLite файлд хадгалагдах тул Vercel зэрэг serverless орчинд биш, өөрийн VPS дээр байршуулна.
 
 ## 1. Шаардлага
 
 - Node.js **22.16 эсвэл түүнээс шинэ** (24 LTS зөвлөмжтэй). Өгөгдлийн санд Node-ийн суурилагдсан `node:sqlite`-г ашигладаг тул native модуль хөрвүүлэх шаардлагагүй.
 - nginx, certbot
-- 1 GB RAM хангалттай.
+- 1 GB RAM хангалттай (`npm run build` хийхэд 1 GB swap нэмэхийг зөвлөнө).
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
@@ -19,9 +19,10 @@ sudo apt-get install -y nodejs nginx certbot python3-certbot-nginx
 sudo useradd --system --create-home --home-dir /srv/time-booking --shell /usr/sbin/nologin booking
 sudo -u booking git clone <repo> /srv/time-booking/app      # эсвэл файлуудаа хуулна
 cd /srv/time-booking/app
-sudo -u booking npm ci --omit=dev
+sudo -u booking npm ci
 sudo -u booking cp .env.example .env
 sudo -u booking nano .env
+sudo -u booking npm run build
 ```
 
 `.env` доторх заавал бөглөх утгууд:
@@ -59,7 +60,26 @@ sudo systemctl status time-booking
 journalctl -u time-booking -f      # лог
 ```
 
-## 4. nginx ба SSL
+## 4. Домэйн холбох (Datacom)
+
+Домэйнээ серверийн IP хаяг руу чиглүүлнэ (Datacom-ийн «Домэйныг IP хаягаар чиглүүлэх» заавар):
+
+1. https://www.datacom.mn руу домэйн бүртгүүлсэн и-мэйл, нууц үгээрээ нэвтэрнэ.
+2. **Домэйн нэр** цэс → тухайн домэйны **Удирдах** → зүүн талын **DNS удирдлага**.
+3. **Шинээр нэмэх A Record** дарж хоёр бичлэг нэмнэ. TTL-ийг 7200 буюу түүнээс их болгоно.
+
+| Хост нэр | Төрөл | Утга |
+|---|---|---|
+| `www` | A | серверийн IP (жишээ `203.0.113.10`) |
+| (хоосон) | A | серверийн IP |
+
+4. Шинэчлэгдэхэд 3–24 цаг болно. Шалгах: `dig +short www.example.mn` серверийн IP-г буцаавал бэлэн.
+
+Хэрэв домэйн Datacom-ийн бус өөр нэрийн сервер (Cloudflare г.м) ашигладаг бол A бичлэгийг тэр үйлчилгээний DNS хэсэгт нэмнэ. Нэрийн серверийг Datacom-ийн **DNS удирдлага → Нэрийн серверүүд** хэсгээс солино.
+
+SSL гэрчилгээг (дараагийн алхам) домэйн серверийн IP руу чиглэсний **дараа** авна.
+
+## 5. nginx ба SSL
 
 ```bash
 sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/time-booking
@@ -71,7 +91,7 @@ sudo certbot --nginx -d example.mn -d www.example.mn  # SSL, автоматаа�
 
 Гал хана: `sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw enable`. 3000 портыг гадагш нээх шаардлагагүй.
 
-## 5. Нөөц хуулбар
+## 6. Нөөц хуулбар
 
 - Апп өдөр бүр `DATA_DIR/backups/app-YYYY-MM-DD.db` файл үүсгэж, сүүлийн `BACKUP_KEEP` (анхдагч 14) хоногийнхыг хадгална.
 - Гараар: `npm run backup` эсвэл админ самбар → Тохиргоо → «Өгөгдлийн сангийн хуулбар татах».
@@ -86,32 +106,34 @@ sudo certbot --nginx -d example.mn -d www.example.mn  # SSL, автоматаа�
 
 Сэргээх: үйлчилгээг зогсоогоод (`systemctl stop time-booking`) нөөц файлыг `DATA_DIR/app.db` болгон хуулж (`app.db-wal`, `app.db-shm` файлуудыг устгана), дахин асаана.
 
-## 6. Шинэчлэх
+## 7. Шинэчлэх
 
 ```bash
 cd /srv/time-booking/app
 sudo -u booking git pull
-sudo -u booking npm ci --omit=dev
+sudo -u booking npm ci
+sudo -u booking npm run build
 sudo systemctl restart time-booking
 ```
 
 Өгөгдлийн сангийн бүтцийн өөрчлөлт (migration) асахад автоматаар хийгдэнэ.
 
-## 7. Facebook ба хурд
+## 8. Facebook ба хурд
 
-- Хуудсууд сервер талд бэлэн HTML-ээр ирж, гаднын фонт, сан ачаалдаггүй. CSS/JS нь хувилбарын hash-тай тул 1 жил кэшлэгдэнэ. nginx gzip шахалт хийнэ.
+- Хуудсууд сервер талд бэлэн HTML-ээр ирж, гаднын фонт, сан ачаалдаггүй. Next.js-ийн CSS/JS (`/_next/static/`) нь хувилбарын hash-тай тул 1 жил кэшлэгдэнэ. nginx gzip шахалт хийнэ.
 - Facebook-д хуваалцахад гарах зураг: `public/img/og.jpg` (1200×630). Өөрийн зургаар солихдоо 1200×630 хэмжээтэй, 300 KB-аас бага JPG ашиглана. Эсвэл байгууллагын нэрээ тохируулсны дараа `npm run og-image`-ээр дахин үүсгэнэ (Chrome шаардлагатай).
 - Зураг, гарчиг солисны дараа https://developers.facebook.com/tools/debug/ дээр хаягаа оруулж «Scrape Again» дарснаар Facebook шинэчилнэ.
 - Сайтад шинэ зураг нэмэхдээ шахаж (https://squoosh.app, WebP/JPG 80%) ашиглана.
 
-## 8. Хяналт
+## 9. Хяналт
 
 - `https://www.example.mn/healthz` нь `ok` буцаана. UptimeRobot зэрэг үнэгүй үйлчилгээгээр хянана.
 - Админ самбарын анхааруулга (шар хайрцаг) нь QPay/SMS тохиргоо дутуу бол мэдэгдэнэ.
 
-## 9. Хүлээлгэн өгөх шалгах хуудас
+## 10. Хүлээлгэн өгөх шалгах хуудас
 
 - [ ] `.env`: `NODE_ENV=production`, `BASE_URL` https, урт `SESSION_SECRET`
+- [ ] Datacom-д `www` болон хоосон хост нэрт A бичлэг серверийн IP руу, `https://` нээгдэж байна
 - [ ] QPay live мэдээлэл, 100₮-ийн жинхэнэ төлбөрөөр шалгасан
 - [ ] SMS gateway, илгээгчийн нэр бүртгэгдсэн, туршилтын SMS ирсэн
 - [ ] Админ → Тохиргоо: байгууллагын нэр, хаяг, утас, газрын зураг, Facebook

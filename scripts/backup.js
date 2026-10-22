@@ -1,15 +1,16 @@
 // Usage: npm run backup [-- <target file>]
 // Writes a consistent copy of the database (safe while the server is running).
-const fs = require('node:fs');
-const path = require('node:path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const envFile = path.join(__dirname, '..', '.env');
+const envFile = path.join(import.meta.dirname, '..', '.env');
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 
-const config = require('../src/config');
-const database = require('../src/db');
-const backup = require('../src/lib/backup');
-const { nowLocal, fromMin } = require('../src/lib/time');
+// Imported after .env is loaded: the config reads it when the module loads.
+const { default: config } = await import('../src/config.js');
+const database = await import('../src/db.js');
+const backup = await import('../src/lib/backup.js');
+const { nowLocal, fromMin } = await import('../src/lib/time.js');
 
 async function main() {
   database.init(config.dataDir);
