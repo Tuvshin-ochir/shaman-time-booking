@@ -122,6 +122,17 @@ test('booking form validates input', async () => {
   assert.equal(one('SELECT COUNT(*) AS n FROM bookings').n, before);
 });
 
+test('the cancellation policy opens in a dialog on the page; on the booking form it has to be read before agreeing', async () => {
+  const book = await (await web.get('/book')).text();
+  assert.match(book, /<dialog class="policy-dialog"[^>]*data-nosnippet/);
+  assert.match(book, /class="policy-card /); // the policy text is in the dialog
+  assert.match(book, /<a href="\/policy" data-policy="agree">/);
+  assert.match(book, /Нөхцөлийг уншиж дуусгасны дараа зөвшөөрнө/);
+  // Footer links on other pages open the same dialog; /policy itself is a normal page.
+  assert.match(await (await web.get('/services')).text(), /<dialog class="policy-dialog"/);
+  assert.doesNotMatch(await (await web.get('/policy')).text(), /<dialog class="policy-dialog"/);
+});
+
 test('admin requires login; actions need a session and the same origin', async () => {
   const anon = await web.get('/admin/bookings?view=all');
   assert.equal(anon.status, 307);
@@ -351,6 +362,11 @@ test('special service: added as «Тусгай», booked by day only on the site
   const manual = one(`SELECT * FROM bookings WHERE customer_name = 'Гар тусгай'`);
   assert.equal(manual.day_only, 1);
   assert.match(await (await admin.get(`/admin/bookings/${manual.id}`)).text(), /Өдөр шилжүүлэх/);
+  // The booking list has an in person / online column.
+  const list = await (await admin.get('/admin/bookings?view=all')).text();
+  assert.match(list, /<span>Хэлбэр<\/span>/);
+  assert.match(list, /badge-online">Онлайн</);
+  assert.match(list, /badge-in-person">Биеэр</);
 });
 
 test('usage guide is public and linked from the login page; logout clears the session', async () => {

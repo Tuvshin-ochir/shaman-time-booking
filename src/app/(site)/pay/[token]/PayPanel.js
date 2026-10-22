@@ -145,7 +145,7 @@ export default function PayPanel({ active, token, expiresAt, serverNow, amount, 
             {checking ? L['pay.checking'] : L['pay.check']}
           </button>
           <p className="hint center">
-            <a href="/policy" target="_blank">
+            <a href="/policy">
               {L['nav.policy']}
             </a>
           </p>

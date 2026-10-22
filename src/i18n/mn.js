@@ -51,6 +51,10 @@ export default {
   'policy.in_short': 'Товчхондоо',
   'policy.details': 'Дэлгэрэнгүй',
   'policy.contact_title': 'Цуцлах, цаг шилжүүлэх бол',
+  'policy.close': 'Хаах',
+  'policy.agree': 'Уншсан, зөвшөөрч байна',
+  'policy.scroll_hint': 'Нөхцөлийг доош гүйлгэн эцэс хүртэл нь уншина уу.',
+  'policy.read_done': 'Уншиж дууслаа. Одоо зөвшөөрч болно.',
   'policy.contact_text': 'Захиалгын код болон утасны дугаараа бэлдээд бидэн рүү залгана уу.',
 
   'contact.title': 'Холбоо барих',
@@ -95,6 +99,7 @@ export default {
   'book.hold_note': 'Төлбөр төлөх хүртэл таны цагийг {minutes} минут барина.',
   'book.agree': 'Цуцлах, буцаалтын нөхцөлийг зөвшөөрч байна',
   'book.read_policy': 'Нөхцөл унших',
+  'book.agree_hint': 'Нөхцөлийг уншиж дуусгасны дараа зөвшөөрнө.',
   'book.submit': 'QPay-ээр төлөх',
   'book.submit_free': 'Захиалга баталгаажуулах',
   'book.noscript': 'Цаг захиалахын тулд браузерын JavaScript-ийг идэвхжүүлнэ үү.',

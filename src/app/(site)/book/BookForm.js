@@ -37,6 +37,9 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
   const [showTime, setShowTime] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [meeting, setMeeting] = useState('');
+  // The policy has to be read to the end (PolicyDialog) before it can be agreed to.
+  const [agreed, setAgreed] = useState(false);
+  const [policyRead, setPolicyRead] = useState(false);
   const [errors, setErrors] = useState({ name: '', phone: '', meeting: '', form: '' });
   const [serverError, setServerError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -140,6 +143,17 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
     loadDays(svc);
     if (!initial) scrollTo(refs.time);
   }
+
+  useEffect(() => {
+    const onAgreed = () => {
+      setPolicyRead(true);
+      setAgreed(true);
+      setError('form', '');
+    };
+    window.addEventListener('policy:agreed', onAgreed);
+    return () => window.removeEventListener('policy:agreed', onAgreed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (initialService) onServiceChange(initialService, true);
@@ -396,14 +410,34 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
           </p>
           <p className="hint">{L['book.hold_note']}</p>
           <div className="check">
-            <input type="checkbox" id="f-agree" name="agree" value="1" onChange={(e) => e.currentTarget.checked && setError('form', '')} />
+            <input
+              type="checkbox"
+              id="f-agree"
+              name="agree"
+              value="1"
+              checked={agreed}
+              aria-describedby="agree-hint"
+              onChange={(e) => {
+                const on = e.currentTarget.checked;
+                // Not read yet: open the policy instead of ticking the box.
+                if (on && !policyRead) {
+                  window.dispatchEvent(new CustomEvent('policy:open', { detail: { agree: true } }));
+                  return;
+                }
+                setAgreed(on);
+                if (on) setError('form', '');
+              }}
+            />
             <label htmlFor="f-agree">
               {L['book.agree']} ·{' '}
-              <a href="/policy" target="_blank">
+              <a href="/policy" data-policy="agree">
                 {L['book.read_policy']}
               </a>
             </label>
           </div>
+          <p className="hint" id="agree-hint" hidden={policyRead}>
+            {L['book.agree_hint']}
+          </p>
           <p className="field-error" id="form-error" role="alert" hidden={!errors.form}>
             {errors.form}
           </p>

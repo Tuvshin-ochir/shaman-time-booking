@@ -41,7 +41,7 @@ export default async function BookPage({ searchParams }) {
       'book.meeting', 'book.meeting_in_person', 'book.meeting_in_person_hint', 'book.meeting_online',
       'book.meeting_online_hint', 'book.summary_meeting',
       'book.summary_service', 'book.summary_price', 'book.summary_pay_now',
-      'book.summary_balance', 'book.agree', 'book.read_policy', 'book.submit',
+      'book.summary_balance', 'book.agree', 'book.read_policy', 'book.agree_hint', 'book.submit',
     ].map((key) => [key, t(key)])
   );
   labels['book.hold_note'] = t('book.hold_note', { minutes: settings.get('schedule').hold_minutes });
