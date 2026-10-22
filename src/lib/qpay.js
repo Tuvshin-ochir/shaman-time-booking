@@ -5,13 +5,14 @@
 //   POST /payment/check  list payments for an invoice
 //   DELETE /invoice/:id  cancel an unpaid invoice
 // QPAY_MODE=mock replaces all of this with an in-memory fake for development.
-const crypto = require('node:crypto');
-const config = require('../config');
+import crypto from 'node:crypto';
+import config from '../config.js';
+import { shared } from './shared.js';
 
 const TIMEOUT_MS = 15000;
 
-let token = null;
-let tokenRequest = null;
+// Access token cache: { token, tokenRequest }.
+const tokens = shared('qpayAuth', () => ({ token: null, tokenRequest: null }));
 
 // QPay returns expires_in as an epoch timestamp (seconds); tolerate a duration too.
 function expiryMs(value, fallbackSeconds) {
@@ -44,6 +45,7 @@ async function request(method, path, { body, auth } = {}) {
 }
 
 async function fetchToken() {
+  const { token } = tokens;
   let data = null;
   if (token && token.refreshExp - 60000 > Date.now()) {
     try {
@@ -56,20 +58,20 @@ async function fetchToken() {
     const basic = Buffer.from(`${config.qpay.clientId}:${config.qpay.clientSecret}`).toString('base64');
     data = await request('POST', '/auth/token', { auth: `Basic ${basic}` });
   }
-  token = {
+  tokens.token = {
     access: data.access_token,
     refresh: data.refresh_token,
     accessExp: expiryMs(data.expires_in, 3600),
     refreshExp: expiryMs(data.refresh_expires_in, 86400),
   };
-  return token.access;
+  return tokens.token.access;
 }
 
 async function accessToken({ force = false } = {}) {
-  if (!force && token && token.accessExp - 60000 > Date.now()) return token.access;
-  if (force) token = token && { ...token, accessExp: 0 };
-  if (!tokenRequest) tokenRequest = fetchToken().finally(() => (tokenRequest = null));
-  return tokenRequest;
+  if (!force && tokens.token && tokens.token.accessExp - 60000 > Date.now()) return tokens.token.access;
+  if (force) tokens.token = tokens.token && { ...tokens.token, accessExp: 0 };
+  if (!tokens.tokenRequest) tokens.tokenRequest = fetchToken().finally(() => (tokens.tokenRequest = null));
+  return tokens.tokenRequest;
 }
 
 async function authed(method, path, body) {
@@ -82,7 +84,7 @@ async function authed(method, path, body) {
 }
 
 // ── Mock provider ─────────────────────────────────────────
-const mockInvoices = new Map();
+const mockInvoices = shared('qpayMockInvoices', () => new Map());
 
 const mock = {
   createInvoice({ amount }) {
@@ -169,4 +171,6 @@ async function cancelInvoice(invoiceId) {
   return authed('DELETE', `/invoice/${encodeURIComponent(invoiceId)}`);
 }
 
-module.exports = { createInvoice, checkPayment, cancelInvoice, isMock, mockPay: mock.pay };
+const mockPay = (invoiceId) => mock.pay(invoiceId);
+
+export { createInvoice, checkPayment, cancelInvoice, isMock, mockPay };

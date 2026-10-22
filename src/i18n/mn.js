@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   days: ['Ням', 'Даваа', 'Мягмар', 'Лхагва', 'Пүрэв', 'Баасан', 'Бямба'],
   days_short: ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'],
 
@@ -9,7 +9,7 @@ module.exports = {
   'nav.policy': 'Цуцлах нөхцөл',
   'nav.menu': 'Цэс',
   'cta.book': 'Цаг захиалах',
-  'theme.toggle': 'Гэгээлэг / бараан горим',
+  'theme.toggle': 'Бараан горим',
 
   'home.eyebrow': 'Онлайн цаг захиалга',
   'home.trust_online': '24/7 онлайн захиалга',
@@ -31,6 +31,8 @@ module.exports = {
   'home.services_sub': 'Үйлчилгээ бүрийн үнэ, үргэлжлэх хугацаа. Онлайнаар захиалж, QPay-ээр төлнө.',
   'home.prepare_title': 'Ирэхээсээ өмнө',
   'home.prepare_sub': 'Үйлчлүүлэхэд тань хялбар болгох хэдэн зөвлөмж.',
+  'home.news_title': 'Мэдээ мэдээлэл',
+  'home.news_all': 'Бүх мэдээ',
   'home.gallery_title': 'Мөнх хөх тэнгэр, эх байгаль',
   'home.faq_title': 'Түгээмэл асуулт',
   'home.cta_title': 'Цагаа одоо захиалаарай',
@@ -45,6 +47,7 @@ module.exports = {
   'services.title': 'Үйлчилгээ ба үнэ',
   'services.intro': 'Бүх үнэ төгрөгөөр. Цагаа онлайнаар захиалж, QPay-ээр төлнө.',
   'services.duration': '{n} минут',
+  'services.day_only': 'Өдөр сонгож захиална',
   'services.deposit': 'Урьдчилгаа {amount} онлайнаар төлнө',
   'services.book': 'Захиалах',
   'services.empty': 'Одоогоор үйлчилгээ бүртгэгдээгүй байна.',
@@ -97,6 +100,11 @@ module.exports = {
   'book.submit_free': 'Захиалга баталгаажуулах',
   'book.noscript': 'Цаг захиалахын тулд браузерын JavaScript-ийг идэвхжүүлнэ үү.',
   'book.select_time_first': 'Эхлээд өдөр, цагаа сонгоно уу.',
+  'book.select_day_first': 'Эхлээд өдрөө сонгоно уу.',
+  'book.step_day': 'Өдөр сонгох',
+  'book.day_only_hint': 'Энэ үйлчилгээнд цаг сонгохгүй, зөвхөн өдрөө сонгоно.',
+  'book.summary_day': 'Өдөр',
+  'book.no_open_days': 'Ойрын хугацаанд захиалга авах өдөр алга. Утсаар холбогдоно уу.',
 
   'err.name': 'Нэрээ оруулна уу.',
   'err.phone': 'Утасны дугаар буруу байна. 8 оронтой гар утасны дугаар оруулна уу.',
@@ -104,6 +112,7 @@ module.exports = {
   'err.time': 'Цагаа сонгоно уу.',
   'err.service': 'Үйлчилгээгээ сонгоно уу.',
   'err.slot_taken': 'Уучлаарай, энэ цагийг саяхан өөр хүн захиалсан байна. Өөр цаг сонгоно уу.',
+  'err.day_closed': 'Уучлаарай, энэ өдөр захиалга авахгүй. Өөр өдөр сонгоно уу.',
   'err.agree': 'Цуцлах нөхцөлийг зөвшөөрнө үү.',
   'err.payment_unavailable':
     'Төлбөрийн систем түр ажиллахгүй байна. Хэсэг хугацааны дараа дахин оролдох эсвэл бидэн рүү залгана уу.',
@@ -140,6 +149,7 @@ module.exports = {
   'booking.name': 'Нэр',
   'booking.service': 'Үйлчилгээ',
   'booking.when': 'Өдөр, цаг',
+  'booking.day': 'Өдөр',
   'booking.address': 'Хаяг',
   'booking.paid': 'Төлсөн',
   'booking.balance': 'Газар дээр төлөх',
@@ -151,4 +161,9 @@ module.exports = {
   'booking.home': 'Нүүр хуудас руу',
 
   'footer.secure': 'Төлбөрийг QPay-ээр аюулгүй хүлээн авна',
+
+  'news.title': 'Мэдээ мэдээлэл',
+  'news.more': 'Дэлгэрэнгүй',
+  'news.back': 'Бүх мэдээ',
+  'news.empty': 'Одоогоор мэдээ алга.',
 };

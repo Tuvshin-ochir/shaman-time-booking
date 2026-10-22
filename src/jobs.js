@@ -1,7 +1,8 @@
-const bookings = require('./lib/bookings');
-const backup = require('./lib/backup');
+import * as bookings from './lib/bookings.js';
+import * as backup from './lib/backup.js';
+import { shared } from './lib/shared.js';
 
-const timers = [];
+const timers = shared('jobTimers', () => []);
 
 function every(ms, name, fn) {
   let running = false;
@@ -21,6 +22,7 @@ function every(ms, name, fn) {
 }
 
 function start() {
+  if (timers.length) return;
   // Confirms payments whose callback never arrived, then releases unpaid holds.
   every(30 * 1000, 'payments', async () => {
     await bookings.pollPendingPayments();
@@ -35,4 +37,4 @@ function stop() {
   timers.length = 0;
 }
 
-module.exports = { start, stop };
+export { start, stop };

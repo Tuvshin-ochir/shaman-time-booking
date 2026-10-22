@@ -29,4 +29,4 @@ function parsePhoneList(text) {
   return { valid: [...new Set(valid)], invalid };
 }
 
-module.exports = { normalizePhone, formatPhone, parsePhoneList };
+export { normalizePhone, formatPhone, parsePhoneList };

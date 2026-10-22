@@ -1,9 +1,9 @@
 // Site texts. The site is Mongolian only; src/i18n/mn.js holds the default
 // strings and the admin's home page editor can override any of them.
-const settings = require('../lib/settings');
-const { weekday } = require('../lib/time');
+import * as settings from '../lib/settings.js';
+import { weekday, fromMin } from '../lib/time.js';
 
-const TEXTS = require('./mn');
+import TEXTS from './mn.js';
 
 // `overrides` ({ key: { mn } }) are the admin's edits from the home page editor.
 function translator(overrides = {}) {
@@ -28,16 +28,23 @@ function formatDate(date) {
   return `${month}-р сарын ${p.day}, ${p.weekday}`;
 }
 
+// "10-р сарын 24, Баасан, 14:00" (with `end`: "14:00–15:00"); a day-only
+// booking (special service) has just the date.
+function formatWhen(booking, { end = false } = {}) {
+  const date = formatDate(booking.date);
+  if (booking.day_only) return date;
+  return `${date}, ${fromMin(booking.start_min)}${end ? `–${fromMin(booking.end_min)}` : ''}`;
+}
+
 function formatPrice(amount) {
   return `${Number(amount || 0).toLocaleString('en-US')}₮`;
 }
 
-function middleware(req, res, next) {
-  res.locals.t = translator(settings.get('landing').texts);
-  res.locals.formatDate = formatDate;
-  next();
+// Translator with the admin's edits applied, for site pages.
+function siteTranslator() {
+  return translator(settings.get('landing').texts);
 }
 
 const DAY_NAMES = TEXTS.days;
 
-module.exports = { DAY_NAMES, translator, dateParts, formatDate, formatPrice, middleware };
+export { TEXTS, DAY_NAMES, translator, siteTranslator, dateParts, formatDate, formatWhen, formatPrice };

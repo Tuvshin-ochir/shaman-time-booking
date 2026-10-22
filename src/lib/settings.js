@@ -1,4 +1,5 @@
-const { db } = require('../db');
+import { db } from '../db.js';
+import { shared } from './shared.js';
 
 const DEFAULTS = {
   business: {
@@ -71,7 +72,7 @@ const DEFAULTS = {
   },
 };
 
-const cache = new Map();
+const cache = shared('settingsCache', () => new Map());
 
 function merge(defaults, stored) {
   if (Array.isArray(defaults)) {
@@ -109,4 +110,4 @@ function clearCache() {
   cache.clear();
 }
 
-module.exports = { get, set, clearCache, DEFAULTS };
+export { get, set, clearCache, DEFAULTS };

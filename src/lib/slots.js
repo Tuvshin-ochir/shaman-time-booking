@@ -1,6 +1,6 @@
-const { db } = require('../db');
-const settings = require('./settings');
-const { nowLocal, addDays, weekday, toMin, localToEpoch } = require('./time');
+import { db } from '../db.js';
+import * as settings from './settings.js';
+import { nowLocal, addDays, weekday, toMin, localToEpoch } from './time.js';
 
 // A booking blocks its time if it is confirmed, or pending with an unexpired hold.
 const BLOCKING_SQL = `(status = 'confirmed' OR (status = 'pending' AND hold_expires_at > ?))`;
@@ -12,6 +12,11 @@ function blockingBookings(fromDate, toDate, { now = Date.now(), excludeId = 0 } 
        WHERE date BETWEEN ? AND ? AND id != ? AND ${BLOCKING_SQL}`
     )
     .all(fromDate, toDate, excludeId, now);
+}
+
+// Hours the admin closed on single dates, as [start_min, end_min) ranges.
+function timeBlocks(fromDate, toDate) {
+  return db().prepare('SELECT date, start_min, end_min FROM time_blocks WHERE date BETWEEN ? AND ?').all(fromDate, toDate);
 }
 
 function isHoliday(date) {
@@ -46,9 +51,22 @@ function bookableRange(now = Date.now(), schedule = settings.get('schedule')) {
   return { first: today, last: addDays(today, Math.max(1, schedule.window_days) - 1) };
 }
 
+// "Тусгай" (special) services are booked for a whole day, without a time.
+const isSpecial = (service) => service.kind === 'special';
+
+// Whether a customer can book a special service on `date`: any open day of the
+// booking window (not a holiday or weekly day off); today only until closing time.
+function dayIsBookable(date, { now = Date.now(), schedule = settings.get('schedule') } = {}) {
+  const range = bookableRange(now, schedule);
+  if (date < range.first || date > range.last) return false;
+  const hours = hoursFor(date, schedule);
+  return !!hours && localToEpoch(date, hours.end) > now + schedule.lead_minutes * 60000;
+}
+
 // Start times (minutes) a customer can book for `service` on `date`.
 // `admin: true` drops the booking-window and lead-time limits.
-function availableTimes(service, date, { now = Date.now(), excludeId = 0, bookings, admin = false } = {}) {
+function availableTimes(service, date, { now = Date.now(), excludeId = 0, bookings, blocks, admin = false } = {}) {
+  if (isSpecial(service)) return [];
   const schedule = settings.get('schedule');
   const range = bookableRange(now, schedule);
   if (!admin && (date < range.first || date > range.last)) return [];
@@ -56,12 +74,14 @@ function availableTimes(service, date, { now = Date.now(), excludeId = 0, bookin
   if (!hours) return [];
 
   const dayBookings = (bookings || blockingBookings(date, date, { now, excludeId })).filter((b) => b.date === date);
+  const dayBlocks = (blocks || timeBlocks(date, date)).filter((b) => b.date === date);
   const earliest = admin ? 0 : now + schedule.lead_minutes * 60000;
   const step = Math.max(5, schedule.slot_minutes);
   const duration = service.duration_min;
   const times = [];
   for (let t = hours.start; t + duration <= hours.end; t += step) {
     if (hours.breakStart !== null && t < hours.breakEnd && t + duration > hours.breakStart) continue;
+    if (dayBlocks.some((b) => t < b.end_min && t + duration > b.start_min)) continue;
     if (localToEpoch(date, t) < earliest) continue;
     if (!fitsCapacity(dayBookings, t, t + duration, schedule.capacity)) continue;
     times.push(t);
@@ -74,10 +94,14 @@ function availableDays(service, { now = Date.now() } = {}) {
   const schedule = settings.get('schedule');
   const range = bookableRange(now, schedule);
   const bookings = blockingBookings(range.first, range.last, { now });
+  const blocks = timeBlocks(range.first, range.last);
   const days = [];
   for (let date = range.first; date <= range.last; date = addDays(date, 1)) {
     const closed = !hoursFor(date, schedule);
-    const free = closed ? 0 : availableTimes(service, date, { now, bookings }).length;
+    let free;
+    if (closed) free = 0;
+    else if (isSpecial(service)) free = dayIsBookable(date, { now, schedule }) ? 1 : 0;
+    else free = availableTimes(service, date, { now, bookings, blocks }).length;
     days.push({ date, closed, free });
   }
   return days;
@@ -90,12 +114,14 @@ function slotIsFree(date, start, end, { now = Date.now(), excludeId = 0 } = {}) 
   return fitsCapacity(blockingBookings(date, date, { now, excludeId }), start, end, schedule.capacity);
 }
 
-module.exports = {
-  BLOCKING_SQL,
+export {  BLOCKING_SQL,
   blockingBookings,
+  timeBlocks,
   hoursFor,
   fitsCapacity,
   bookableRange,
+  isSpecial,
+  dayIsBookable,
   availableTimes,
   availableDays,
   slotIsFree,

@@ -1,6 +1,6 @@
-const config = require('../config');
-const { db } = require('../db');
-const settings = require('./settings');
+import config from '../config.js';
+import { db } from '../db.js';
+import * as settings from './settings.js';
 
 // Informal Mongolian Latin as people text it (ө/ү -> u, х -> h). Latin SMS fit
 // 160 chars per segment instead of 70 and work on gateways without Unicode.
@@ -28,11 +28,24 @@ function fill(template, vars, encode) {
   return template.replace(/\{(to|text|from|key)\}/g, (_, name) => encode(vars[name] ?? ''));
 }
 
+// WeSend (wesend.mn) needs only the API key: https://wesend.mn/docs/sms
+const WESEND_URL = 'https://api.wesend.mn/v1/sms';
+
 async function deliver(to, text) {
   const sms = config.sms;
   if (sms.provider === 'console') {
     console.log(`[sms] -> ${to}: ${text}`);
     return { ok: true, response: 'console (илгээгээгүй, зөвхөн лог)' };
+  }
+  if (sms.provider === 'wesend') {
+    if (!sms.apiKey) throw new Error('SMS_API_KEY (WeSend-ийн API түлхүүр) тохируулаагүй байна');
+    const res = await fetch(WESEND_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${sms.apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ to: sms.phonePrefix + to, text }),
+      signal: AbortSignal.timeout(15000),
+    });
+    return { ok: res.ok, response: `${res.status} ${(await res.text()).slice(0, 500)}` };
   }
   if (sms.provider !== 'http') throw new Error(`Unknown SMS_PROVIDER: ${sms.provider}`);
   if (!sms.url) throw new Error('SMS_HTTP_URL тохируулаагүй байна');
@@ -77,4 +90,4 @@ async function send(to, body, { bookingId = null, kind = 'manual' } = {}) {
   return { id: Number(info.lastInsertRowid), ok: result.ok };
 }
 
-module.exports = { send, transliterate };
+export { send, transliterate };

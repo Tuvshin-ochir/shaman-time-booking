@@ -1,1 +1,0 @@
-<% const st = statusOf(b); %><span class="badge badge-<%= st %>"><%= statusLabel(st) %></span><% if (b.refund_status === 'pending') { %> <span class="badge badge-refund">Буцаалт хүлээгдэж буй</span><% } else if (b.refund_status === 'done') { %> <span class="badge badge-muted">Буцаасан</span><% } %>

@@ -5,7 +5,8 @@ server {
     listen 80;
     server_name example.mn www.example.mn;
 
-    client_max_body_size 1m;
+    # Home page editor image uploads are up to ~8 MB.
+    client_max_body_size 10m;
 
     gzip on;
     gzip_comp_level 5;

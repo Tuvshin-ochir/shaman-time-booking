@@ -1,4 +1,4 @@
-const { db } = require('./db');
+import { db } from './db.js';
 
 // Example services so a fresh install has something to book. Edit or replace
 // them from the admin panel (Үйлчилгээ).
@@ -42,4 +42,4 @@ function seed() {
   db().prepare(`INSERT INTO settings (key, value) VALUES ('seeded', 'true')`).run();
 }
 
-module.exports = { seed, SAMPLE_SERVICES };
+export { seed, SAMPLE_SERVICES };

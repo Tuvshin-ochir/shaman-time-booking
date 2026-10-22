@@ -1,6 +1,6 @@
-const crypto = require('node:crypto');
-const config = require('../config');
-const { db } = require('../db');
+import crypto from 'node:crypto';
+import config from '../config.js';
+import { db } from '../db.js';
 
 const COOKIE = 'adm';
 const SESSION_MS = 12 * 60 * 60 * 1000;
@@ -98,8 +98,7 @@ function ensureAdmin() {
   setPassword(config.admin.username, password);
 }
 
-module.exports = {
-  COOKIE,
+export {  COOKIE,
   hashPassword,
   verifyPassword,
   createSession,

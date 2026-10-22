@@ -1,10 +1,10 @@
 // Everything on the home page the admin can edit: UI strings, long-form
 // content, images and the gallery. Admin form: views/admin/landing.ejs.
-const fs = require('node:fs');
-const path = require('node:path');
-const crypto = require('node:crypto');
-const config = require('../config');
-const settings = require('./settings');
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import config from '../config.js';
+import * as settings from './settings.js';
 
 // store: 'text'     -> settings.landing.texts[key] overrides the string `key` in src/i18n/mn.js
 //        'content'  -> settings.content[`${key}_mn`]
@@ -69,6 +69,15 @@ const SECTIONS = [
       { store: 'text', key: 'home.prepare_title', label: 'Гарчиг' },
       { store: 'text', key: 'home.prepare_sub', label: 'Тайлбар' },
       { store: 'content', key: 'prepare', label: 'Зөвлөмжүүд', kind: 'lines', hint: 'Мөр бүрт нэг. Хоосон бол энэ хэсэг харагдахгүй.' },
+    ],
+  },
+  {
+    id: 'news',
+    title: 'Мэдээ мэдээлэл',
+    note: { text: 'Мэдээг «Мэдээ» цэснээс нэмж, засна. Нийтэлсэн мэдээгүй бол энэ хэсэг харагдахгүй.', href: '/admin/news' },
+    fields: [
+      { store: 'text', key: 'home.news_title', label: 'Гарчиг' },
+      { store: 'text', key: 'home.news_all', label: 'Холбоосын текст' },
     ],
   },
   {
@@ -312,7 +321,10 @@ function removeOrphans() {
   } catch {
     return;
   }
-  for (const file of files) if (file.endsWith('.jpg') && !used.has(file)) fs.rmSync(path.join(uploadDir(), file), { force: true });
+  // News pictures (news-*.jpg) are looked after by src/lib/news.js.
+  for (const file of files) {
+    if (file.endsWith('.jpg') && !file.startsWith('news-') && !used.has(file)) fs.rmSync(path.join(uploadDir(), file), { force: true });
+  }
 }
 
 function updateLanding(mutate) {
@@ -383,12 +395,13 @@ function resetGallery() {
   });
 }
 
-module.exports = {
-  SECTIONS,
+export {  SECTIONS,
   IMAGE_SLOTS,
   GALLERY_SIZES,
   GALLERY_MAX,
   LandingError,
+  uploadDir,
+  storeUpload,
   image,
   isCustomImage,
   gallery,

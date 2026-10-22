@@ -1,6 +1,8 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+import fs from 'node:fs';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import config from './config.js';
+import { shared } from './lib/shared.js';
 
 // Each entry runs once; PRAGMA user_version records how many have been applied.
 const MIGRATIONS = [
@@ -117,62 +119,99 @@ const MIGRATIONS = [
   `,
   // Services with past bookings are hidden instead of deleted so booking history stays intact.
   `ALTER TABLE services ADD COLUMN deleted_at INTEGER;`,
+  // Hours closed on one date (e.g. 14:00–16:00), next to whole-day holidays.
+  `
+  CREATE TABLE time_blocks (
+    id         INTEGER PRIMARY KEY,
+    date       TEXT NOT NULL,
+    start_min  INTEGER NOT NULL,
+    end_min    INTEGER NOT NULL,
+    note       TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX idx_time_blocks_date ON time_blocks(date);
+  `,
+  // News posts written in the admin; `body` is HTML cleaned by src/lib/rich-text.js.
+  `
+  CREATE TABLE news (
+    id         INTEGER PRIMARY KEY,
+    title      TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    date       TEXT NOT NULL,           -- shown on the site, newest first
+    image      TEXT,                    -- JSON { src, width, height, small, smallWidth } or NULL
+    published  INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX idx_news_date ON news(published, date);
+  `,
+  // Service type: 'regular' (customer picks a day and a time) or 'special'
+  // (customer picks only a day; no duration). Bookings of special services are
+  // day_only, with start_min = end_min = 0 so they never take up a time slot.
+  `
+  ALTER TABLE services ADD COLUMN kind TEXT NOT NULL DEFAULT 'regular';
+  ALTER TABLE bookings ADD COLUMN day_only INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
-let instance = null;
-let instancePath = null;
+// { db, path } of the open connection.
+const conn = shared('db', () => ({ db: null, path: null }));
 
-function migrate(db) {
-  const current = db.prepare('PRAGMA user_version').get().user_version;
+function migrate(database) {
+  const current = database.prepare('PRAGMA user_version').get().user_version;
   for (let v = current; v < MIGRATIONS.length; v++) {
-    db.exec('BEGIN');
+    database.exec('BEGIN');
     try {
-      db.exec(MIGRATIONS[v]);
-      db.exec(`PRAGMA user_version = ${v + 1}`);
-      db.exec('COMMIT');
+      database.exec(MIGRATIONS[v]);
+      database.exec(`PRAGMA user_version = ${v + 1}`);
+      database.exec('COMMIT');
     } catch (err) {
-      db.exec('ROLLBACK');
+      database.exec('ROLLBACK');
       throw err;
     }
   }
 }
 
-function init(dataDir) {
-  if (instance) return instance;
+function init(dataDir = config.dataDir) {
+  if (conn.db) return conn.db;
   fs.mkdirSync(dataDir, { recursive: true });
-  instancePath = path.join(dataDir, 'app.db');
-  instance = new DatabaseSync(instancePath);
-  instance.exec('PRAGMA journal_mode = WAL');
-  instance.exec('PRAGMA foreign_keys = ON');
-  instance.exec('PRAGMA busy_timeout = 5000');
-  migrate(instance);
-  return instance;
+  const file = path.join(dataDir, 'app.db');
+  const database = new DatabaseSync(file);
+  database.exec('PRAGMA journal_mode = WAL');
+  database.exec('PRAGMA foreign_keys = ON');
+  database.exec('PRAGMA busy_timeout = 5000');
+  migrate(database);
+  conn.db = database;
+  conn.path = file;
+  return database;
 }
 
+// Opens the database on first use (DATA_DIR/app.db).
 function db() {
-  if (!instance) throw new Error('Database is not initialised');
-  return instance;
+  return conn.db || init();
 }
 
 // Runs fn inside BEGIN IMMEDIATE so concurrent writers (other processes too)
 // are serialised. Nested calls join the outer transaction.
 function tx(fn) {
-  const conn = db();
-  if (conn.isTransaction) return fn();
-  conn.exec('BEGIN IMMEDIATE');
+  const database = db();
+  if (database.isTransaction) return fn();
+  database.exec('BEGIN IMMEDIATE');
   try {
     const result = fn();
-    conn.exec('COMMIT');
+    database.exec('COMMIT');
     return result;
   } catch (err) {
-    if (conn.isTransaction) conn.exec('ROLLBACK');
+    if (database.isTransaction) database.exec('ROLLBACK');
     throw err;
   }
 }
 
 function close() {
-  if (instance) instance.close();
-  instance = null;
+  if (conn.db) conn.db.close();
+  conn.db = null;
 }
 
-module.exports = { init, db, tx, close, dbPath: () => instancePath };
+const dbPath = () => conn.path;
+
+export { init, db, tx, close, dbPath };
