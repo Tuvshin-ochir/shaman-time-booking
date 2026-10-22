@@ -227,6 +227,7 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
                   <span className="option-title">{s.name}</span>
                   <span className="option-meta">{s.dayOnly ? S.dayOnly : S.duration.replace('{n}', s.duration)}</span>
                   <span className="option-price">{price(s.price)}</span>
+                  {s.description && <span className="option-desc">{s.description}</span>}
                 </span>
               </label>
             ))}

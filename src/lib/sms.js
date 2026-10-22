@@ -32,6 +32,28 @@ function fill(template, vars, encode) {
 const WESEND_URL = 'https://api.wesend.mn/v1/sms';
 const WESEND_BALANCE_URL = 'https://api.wesend.mn/v1/balance';
 
+// WeSend error codes (https://wesend.mn/docs/errors) explained for the SMS log.
+const WESEND_ERRORS = {
+  trial_recipient:
+    'WeSend туршилтын (trial) горимд байгаа тул зөвхөн таны баталгаажуулсан дугаар руу илгээнэ. wesend.mn дээр ДАН-аар баталгаажуулж төслөө идэвхжүүлнэ үү.',
+  subscription_required: 'WeSend төсөл идэвхгүй байна: ДАН-аар баталгаажаагүй эсвэл сарын төлбөр төлөгдөөгүй.',
+  insufficient_credits: 'WeSend-ийн кредит хүрэлцэхгүй байна. wesend.mn-ээс цэнэглэнэ үү.',
+  invalid_api_key: 'WeSend-ийн API түлхүүр буруу эсвэл хүчингүй болсон (SMS_API_KEY).',
+  unsupported_number: 'Энэ дугаарын операторт WeSend илгээдэггүй.',
+  rate_limited: 'Хэт олон SMS зэрэг илгээлээ. Түр хүлээгээд дахин илгээнэ үү.',
+  recipient_rate_limited: 'Энэ дугаар руу хэт олон SMS илгээлээ. Түр хүлээгээд дахин илгээнэ үү.',
+  provider_failed: 'Оператор SMS-ийг хүлээж аваагүй (кредит буцаагдсан). Дахин илгээж үзнэ үү.',
+};
+
+function wesendError(text) {
+  try {
+    const code = JSON.parse(text).error.code;
+    return WESEND_ERRORS[code] ? `${code}: ${WESEND_ERRORS[code]} ` : '';
+  } catch {
+    return '';
+  }
+}
+
 async function deliver(to, text) {
   const sms = config.sms;
   if (sms.provider === 'console') {
@@ -46,7 +68,8 @@ async function deliver(to, text) {
       body: JSON.stringify({ to: sms.phonePrefix + to, text }),
       signal: AbortSignal.timeout(15000),
     });
-    return { ok: res.ok, response: `${res.status} ${(await res.text()).slice(0, 500)}` };
+    const answer = await res.text();
+    return { ok: res.ok, response: `${res.status} ${res.ok ? '' : wesendError(answer)}${answer}`.slice(0, 500) };
   }
   if (sms.provider !== 'http') throw new Error(`Unknown SMS_PROVIDER: ${sms.provider}`);
   if (!sms.url) throw new Error('SMS_HTTP_URL тохируулаагүй байна');

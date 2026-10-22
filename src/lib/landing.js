@@ -42,26 +42,6 @@ const SECTIONS = [
     ],
   },
   {
-    id: 'services',
-    title: 'Үйлчилгээ',
-    note: { text: 'Үйлчилгээний нэр, тайлбар, үнийг «Үйлчилгээ» цэснээс засна.', href: '/admin/services' },
-    fields: [
-      { store: 'text', key: 'home.services_title', label: 'Гарчиг' },
-      { store: 'text', key: 'home.services_sub', label: 'Тайлбар', kind: 'multiline' },
-      { store: 'text', key: 'home.all_services', label: 'Холбоосын текст' },
-    ],
-  },
-  {
-    id: 'how',
-    title: 'Хэрхэн захиалах вэ',
-    fields: [
-      { store: 'text', key: 'home.how_title', label: 'Гарчиг' },
-      { store: 'text', key: 'home.step1', label: 'Алхам 1' },
-      { store: 'text', key: 'home.step2', label: 'Алхам 2' },
-      { store: 'text', key: 'home.step3', label: 'Алхам 3' },
-    ],
-  },
-  {
     id: 'prepare',
     title: 'Ирэхээсээ өмнө',
     images: ['prepare'],

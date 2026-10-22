@@ -52,7 +52,8 @@ export default async function SmsPage() {
                     {s.status === 'failed' && s.provider_response && (
                       <>
                         <br />
-                        <small className="muted">{s.provider_response.slice(0, 120)}</small>
+                        {/* Long enough for the explanation of WeSend errors (src/lib/sms.js). */}
+                        <small className="muted">{s.provider_response.slice(0, 260)}</small>
                       </>
                     )}
                   </td>

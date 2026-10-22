@@ -51,6 +51,10 @@ export default async function Dashboard() {
     warnings.push('Байгууллагын хаяг, утас анхны жишээ утгатай байна. Тохиргоо → Байгууллага.');
   }
   if (config.isProd && !config.baseUrl.startsWith('https://')) warnings.push('BASE_URL https биш байна.');
+  // WeSend refuses every number but the owner's until the project is verified (src/lib/sms.js).
+  if (one(`SELECT 1 AS n FROM sms_log WHERE status = 'failed' AND provider_response LIKE '%trial_recipient%' AND created_at > ?`, now - 7 * 86400000)) {
+    warnings.push('Үйлчлүүлэгчид SMS очихгүй байна: WeSend туршилтын (trial) горимд байгаа тул зөвхөн таны өөрийн дугаар руу илгээдэг. wesend.mn дээр ДАН-аар баталгаажуулж төслөө идэвхжүүлээд SMS цэснээс дахин илгээнэ үү.');
+  }
 
   return (
     <>

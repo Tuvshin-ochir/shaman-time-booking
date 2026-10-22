@@ -476,7 +476,7 @@ export default function LandingEditor({ sections, slots, gallery, gallerySizes, 
         </div>
       </form>
 
-      <div className={`a-toast${toast && toast.isError ? ' is-error' : ''}`} id="a-toast" role="status" aria-live="polite" hidden={!toast}>
+      <div className={`a-snack${toast && toast.isError ? ' is-error' : ''}`} id="a-snack" role="status" aria-live="polite" hidden={!toast}>
         {toast ? toast.message : ''}
       </div>
     </>

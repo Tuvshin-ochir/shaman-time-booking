@@ -4,9 +4,8 @@ import * as landing from '@/lib/landing.js';
 import * as news from '@/lib/news.js';
 import { siteTranslator, formatPrice } from '@/i18n/index.js';
 import { nowLocal, toMin, localToEpoch } from '@/lib/time.js';
-import { activeServices, nextFreeSlot, openingHours, lines, faqItems, telHref, pageMetadata } from '@/lib/site.js';
+import { nextFreeSlot, openingHours, lines, faqItems, telHref, pageMetadata } from '@/lib/site.js';
 import SitePage from '@/components/site/SitePage.js';
-import ServiceCard from '@/components/site/ServiceCard.js';
 import Hours from '@/components/site/Hours.js';
 import HeroSky from '@/components/site/HeroSky.js';
 import NewsCard from '@/components/site/NewsCard.js';
@@ -36,7 +35,6 @@ export default async function HomePage({ searchParams }) {
   const t = siteTranslator();
   const business = settings.get('business');
   const content = settings.get('content');
-  const services = activeServices();
   const hours = openingHours();
   const highlights = lines(content.highlights_mn);
   const prepare = lines(content.prepare_mn);
@@ -71,7 +69,7 @@ export default async function HomePage({ searchParams }) {
               <a className="btn btn-primary btn-lg" href="/book">
                 {t('home.hero_btn_primary')}
               </a>
-              <a className="btn btn-light btn-lg" href="#services">
+              <a className="btn btn-light btn-lg" href="/services">
                 {t('home.hero_btn_secondary')}
               </a>
             </div>
@@ -166,45 +164,6 @@ export default async function HomePage({ searchParams }) {
             )}
             <a href="/about">{t('home.intro_link')} →</a>
           </div>
-        </div>
-      </section>
-
-      {services.length > 0 && (
-        <section className="section section-soft" id="services">
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <h2>{t('home.services_title')}</h2>
-                <p className="section-sub">{t('home.services_sub')}</p>
-              </div>
-              <a href="/services">{t('home.all_services')} →</a>
-            </div>
-            <div className="cards">
-              {services.map((s) => (
-                <ServiceCard key={s.id} s={s} t={t} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="section">
-        <div className="container">
-          <h2>{t('home.how_title')}</h2>
-          <ol className="how">
-            <li>
-              <span className="how-num">1</span>
-              {t('home.step1')}
-            </li>
-            <li>
-              <span className="how-num">2</span>
-              {t('home.step2')}
-            </li>
-            <li>
-              <span className="how-num">3</span>
-              {t('home.step3')}
-            </li>
-          </ol>
         </div>
       </section>
 

@@ -18,24 +18,49 @@ function sectionOf(path) {
   return null;
 }
 
-// ?ok=... / ?err=... messages after an action.
+// After an action (?ok=... / ?err=...): a notice that pops up over the page,
+// so it is seen even when the form was far down. Success closes itself after
+// a few seconds; an error stays until closed.
 function Flash() {
   const query = useSearchParams();
   const ok = MESSAGES[query.get('ok')];
   const err = ERRORS[query.get('err')];
+  const [notice, setNotice] = useState(null);
+
+  useEffect(() => {
+    if (!ok && !err) return;
+    setNotice({ ok: !!ok, text: ok || err });
+    // Drop ?ok= / ?err= from the address so a reload does not show it again.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('ok');
+    url.searchParams.delete('err');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  }, [ok, err]);
+
+  useEffect(() => {
+    if (!notice || !notice.ok) return undefined;
+    const timer = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  if (!notice) return null;
   return (
-    <>
-      {ok && (
-        <div className="a-alert a-alert-ok" role="status">
-          {ok}
-        </div>
-      )}
-      {err && (
-        <div className="a-alert a-alert-err" role="alert">
-          {err}
-        </div>
-      )}
-    </>
+    <div className="a-toast-wrap">
+      <div className={`a-toast${notice.ok ? '' : ' a-toast-err'}`} role={notice.ok ? 'status' : 'alert'}>
+        <span className="a-toast-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d={notice.ok ? 'M5 12.5l4.5 4.5L19 7.5' : 'M12 7v6M12 17h.01'} />
+          </svg>
+        </span>
+        <span className="a-toast-body">
+          <strong className="a-toast-title">{notice.ok ? 'Амжилттай' : 'Алдаа гарлаа'}</strong>
+          <span className="a-toast-text">{notice.text}</span>
+        </span>
+        <button type="button" className="a-toast-close" aria-label="Хаах" onClick={() => setNotice(null)}>
+          ×
+        </button>
+      </div>
+    </div>
   );
 }
 

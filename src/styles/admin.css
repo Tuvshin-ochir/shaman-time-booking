@@ -67,6 +67,7 @@ p { margin: 0 0 12px; }
 @media (min-width: 960px) {
   .a-sidebar { transform: none; }
   .a-page { margin-left: 264px; }
+  .a-toast-wrap { left: 280px; }
   .a-topbar { display: none; }
   .a-backdrop { display: none !important; }
   .a-main { padding: 28px 32px 72px; }
@@ -92,6 +93,24 @@ p { margin: 0 0 12px; }
 .a-alert-ok { background: var(--ok-50); border-color: #bfe5cf; color: #0f5c38; }
 .a-alert-err { background: var(--danger-50); border-color: #f6cfcb; color: var(--danger); }
 .a-alert-warn { background: var(--warn-50); border-color: #f5ddb0; color: #6b4300; }
+
+/* Notice after an action (Flash in AdminShell): pops up at the top of the screen. */
+.a-toast-wrap { position: fixed; top: 16px; left: 16px; right: 16px; z-index: 100; display: flex; justify-content: center; pointer-events: none; }
+.a-toast {
+  pointer-events: auto; display: flex; align-items: flex-start; gap: 12px; width: 100%; max-width: 440px;
+  padding: 14px 12px 14px 16px; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 12px;
+  background: #fff; color: var(--ink); box-shadow: 0 14px 36px rgba(9,18,23,.2); animation: a-toast-in .25s ease-out;
+}
+.a-toast-err { border-left-color: var(--danger); }
+.a-toast-icon { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ok-50); color: var(--ok); }
+.a-toast-err .a-toast-icon { background: var(--danger-50); color: var(--danger); }
+.a-toast-body { flex: 1; min-width: 0; }
+.a-toast-title { display: block; font-weight: 700; }
+.a-toast-text { display: block; margin-top: 2px; color: var(--muted); font-size: 0.875rem; }
+.a-toast-close { flex: none; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 22px; line-height: 1.1; cursor: pointer; }
+.a-toast-close:hover { background: #f0f3f4; color: var(--ink); }
+@keyframes a-toast-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .a-toast { animation: none; } }
 
 .a-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .a-head h1 { margin: 0; }
@@ -339,11 +358,12 @@ details > label { margin-bottom: 12px; }
 }
 .save-state { display: none; margin-right: auto; color: #8a5300; font-size: .875rem; font-weight: 600; }
 .landing-form.is-dirty .save-state { display: inline; }
-.a-toast {
+/* Progress and errors of the home page editor (LandingEditor). */
+.a-snack {
   position: fixed; left: 50%; bottom: 24px; z-index: 50; transform: translateX(-50%); max-width: calc(100vw - 32px);
   padding: 12px 18px; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.25);
 }
-.a-toast.is-error { background: var(--danger); }
+.a-snack.is-error { background: var(--danger); }
 @media (min-width: 720px) {
   .landing-fields { grid-template-columns: 1fr 1fr; }
   .landing-fields .is-wide { grid-column: 1 / -1; }

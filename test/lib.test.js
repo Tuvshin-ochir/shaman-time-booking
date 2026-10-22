@@ -20,7 +20,7 @@ test('home page editor saves texts as overrides of the defaults', () => {
   landing.saveTexts(
     {
       'text:home.cta_title': 'Өнөөдөр цагаа аваарай',
-      'text:home.step1': defaults('home.step1'), // same as the default -> not stored
+      'text:home.eyebrow': defaults('home.eyebrow'), // same as the default -> not stored
       'business:name': 'Бөө Тест',
       'content:home_intro': 'Шинэ танилцуулга',
       'caption:0': 'Шинэ тайлбар',
@@ -28,7 +28,7 @@ test('home page editor saves texts as overrides of the defaults', () => {
     defaults
   );
   assert.deepEqual(settings.get('landing').texts['home.cta_title'], { mn: 'Өнөөдөр цагаа аваарай' });
-  assert.equal(settings.get('landing').texts['home.step1'], undefined);
+  assert.equal(settings.get('landing').texts['home.eyebrow'], undefined);
   assert.equal(i18n.siteTranslator()('home.cta_title'), 'Өнөөдөр цагаа аваарай');
   assert.equal(settings.get('business').name, 'Бөө Тест');
   assert.equal(settings.get('content').home_intro_mn, 'Шинэ танилцуулга');
@@ -187,7 +187,7 @@ test('WeSend: POST with the API key, failures are logged, the deploy check reads
     assert.equal(failed.ok, false);
     const row = db().prepare('SELECT * FROM sms_log WHERE id = ?').get(failed.id);
     assert.equal(row.status, 'failed');
-    assert.match(row.provider_response, /^403 .*trial_recipient/);
+    assert.match(row.provider_response, /^403 trial_recipient: WeSend туршилтын .*ДАН/);
 
     config.sms.apiKey = '';
     assert.equal((await sms.send('99112233', 'Test')).ok, false);
