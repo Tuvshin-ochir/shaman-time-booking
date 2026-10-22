@@ -1,0 +1,9 @@
+<%
+  const confirmText = upcomingCount
+    ? `«${s.name}» үйлчилгээнд ирээдүйн ${upcomingCount} захиалга байна. Захиалгууд хэвээр үлдэх ч шинээр захиалах боломжгүй болно. Устгах уу?`
+    : `«${s.name}» үйлчилгээг устгах уу?`;
+%>
+<form method="post" action="/admin/services/<%= s.id %>/delete" class="inline-form" data-confirm="<%= confirmText %>">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <button class="a-btn a-btn-sm a-btn-danger-ghost" type="submit"><%= locals.label || 'Устгах' %></button>
+</form>

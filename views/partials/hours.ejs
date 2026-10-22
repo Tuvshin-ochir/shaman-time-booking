@@ -1,0 +1,13 @@
+<table class="hours">
+  <tbody>
+    <% hours.forEach((h) => { %>
+    <tr class="<%= h.open ? '' : 'is-closed' %>">
+      <th scope="row"><%= h.name %></th>
+      <td>
+        <%= h.hours %>
+        <% if (h.note) { %><span class="hours-note"><%= h.note %></span><% } %>
+      </td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>

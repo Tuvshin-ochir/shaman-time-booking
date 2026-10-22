@@ -1,0 +1,23 @@
+# /etc/nginx/sites-available/time-booking
+# Replace example.mn with your domain, then run certbot --nginx to add SSL.
+
+server {
+    listen 80;
+    server_name example.mn www.example.mn;
+
+    client_max_body_size 1m;
+
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 512;
+    gzip_types text/css application/javascript application/json image/svg+xml text/plain application/xml;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+}

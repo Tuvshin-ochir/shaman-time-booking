@@ -1,0 +1,41 @@
+<%- include('_top', { pageTitle: 'Төлбөр' }) %>
+
+<h1>Төлбөрийн түүх</h1>
+<nav class="quick-filters">
+  <a href="/admin/payments"<% if (!status) { %> aria-current="true"<% } %>>Бүгд</a>
+  <a href="/admin/payments?status=paid"<% if (status === 'paid') { %> aria-current="true"<% } %>>Төлөгдсөн</a>
+  <a href="/admin/payments?status=created"<% if (status === 'created') { %> aria-current="true"<% } %>>Хүлээгдэж буй</a>
+  <a href="/admin/payments?status=cancelled"<% if (status === 'cancelled') { %> aria-current="true"<% } %>>Цуцлагдсан</a>
+</nav>
+
+<% if (rows.length) { %>
+<div class="a-table-wrap">
+  <table class="a-table">
+    <thead><tr><th>Үүссэн</th><th>Захиалга</th><th>Үйлчлүүлэгч</th><th>Дүн</th><th>Төрөл</th><th>Төлөв</th><th>Төлсөн</th><th>Нэхэмжлэх</th></tr></thead>
+    <tbody>
+    <% rows.forEach((p) => { %>
+      <tr>
+        <td><%= formatTs(p.created_at) %></td>
+        <td><a class="mono" href="/admin/bookings/<%= p.booking_id %>"><%= p.code %></a><br><small><%= p.date %> <%= fromMin(p.start_min) %></small></td>
+        <td><%= p.customer_name %><br><small><%= formatPhone(p.phone) %></small></td>
+        <td><strong><%= formatPrice(p.amount) %></strong></td>
+        <td><%= p.provider %></td>
+        <td><span class="badge badge-pay-<%= p.status %>"><%= p.status %></span></td>
+        <td><%= formatTs(p.paid_at) %></td>
+        <td class="mono small"><%= p.invoice_id || p.note || '' %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } else { %><p class="a-empty">Төлбөр алга.</p><% } %>
+
+<% if (pages > 1) { %>
+<nav class="pager">
+  <% if (page > 1) { %><a class="a-btn" href="?status=<%= status %>&page=<%= page - 1 %>">← Өмнөх</a><% } %>
+  <span><%= page %> / <%= pages %></span>
+  <% if (page < pages) { %><a class="a-btn" href="?status=<%= status %>&page=<%= page + 1 %>">Дараах →</a><% } %>
+</nav>
+<% } %>
+
+<%- include('_bottom') %>

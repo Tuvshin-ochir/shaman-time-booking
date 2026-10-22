@@ -1,0 +1,32 @@
+<%- include('_top', { pageTitle: 'Үйлчилгээ' }) %>
+
+<div class="a-head">
+  <h1>Үйлчилгээ ба үнэ</h1>
+  <div class="a-head-actions"><a class="a-btn a-btn-primary" href="/admin/services/new">+ Үйлчилгээ нэмэх</a></div>
+</div>
+
+<div class="a-table-wrap">
+  <table class="a-table">
+    <thead><tr><th>Нэр</th><th>Хугацаа</th><th>Үнэ</th><th>Онлайн төлөх</th><th>Төлөв</th><th></th></tr></thead>
+    <tbody>
+    <% services.forEach((s) => { %>
+      <tr class="<%= s.active ? '' : 'is-muted' %>">
+        <td><strong><%= s.name %></strong></td>
+        <td><%= s.duration_min %> мин</td>
+        <td><%= formatPrice(s.price) %></td>
+        <td><%= formatPrice(s.deposit ?? s.price) %><% if (s.deposit !== null) { %> <small class="muted">(урьдчилгаа)</small><% } %></td>
+        <td><span class="badge <%= s.active ? 'badge-confirmed' : 'badge-muted' %>"><%= s.active ? 'Идэвхтэй' : 'Нуусан' %></span></td>
+        <td>
+          <div class="row-actions">
+            <a class="a-btn a-btn-sm" href="/admin/services/<%= s.id %>">Засах</a>
+            <%- include('_service-delete', { s, upcomingCount: upcoming[s.id] || 0 }) %>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+</div>
+<p class="muted small">Устгасан үйлчилгээ сайтаас алга болох ч өмнөх захиалгууд хэвээр хадгалагдана. Түр нуух бол засах хэсгээс «Идэвхтэй»-н чагтыг авна.</p>
+
+<%- include('_bottom') %>

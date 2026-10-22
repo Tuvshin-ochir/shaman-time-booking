@@ -1,0 +1,112 @@
+<%- include('_top', { pageTitle: 'Нүүр хуудас' }) %>
+
+<div class="a-head">
+  <h1>Нүүр хуудас</h1>
+  <div class="a-head-actions">
+    <a class="a-btn" href="/" target="_blank" rel="noopener">Сайтаас харах ↗</a>
+  </div>
+</div>
+<p class="muted">Сайтын нүүр хуудсанд харагдах текст, зургийг дээрээс доош дарааллаар нь засна. Текстээ засаад доод талын <strong>Хадгалах</strong> товчийг дарна. Сонгосон зураг тэр дороо хадгалагдах бөгөөд утсанд хурдан ачаалахаар автоматаар шахагдана.</p>
+
+<% if (error) { %><div class="a-alert a-alert-err" role="alert"><%= error %></div><% } %>
+
+<nav class="quick-filters landing-index" aria-label="Хэсгүүд">
+  <% sections.forEach((s, i) => { %><a href="#sec-<%= s.id %>"><%= i + 1 %>. <%= s.title %></a><% }) %>
+</nav>
+
+<form method="post" action="/admin/landing" id="landing-form" class="landing-form">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+  <% sections.forEach((s, i) => { %>
+  <section class="a-card landing-section" id="sec-<%= s.id %>">
+    <h2 class="landing-title"><span class="sec-num"><%= i + 1 %></span><%= s.title %></h2>
+    <% if (s.note) { %><p class="landing-note">ℹ︎ <a href="<%= s.note.href %>"><%= s.note.text %></a></p><% } %>
+
+    <% if (s.images) { %>
+      <div class="img-slots">
+        <% s.images.forEach((slot) => { %><%- include('_image-slot', { slot, cfg: slots[slot], img: image(slot), custom: isCustom(slot) }) %><% }) %>
+      </div>
+    <% } %>
+
+    <% if (s.gallery) { %>
+      <div class="gallery-admin">
+        <% gallery.forEach((g, gi) => { %>
+        <div class="g-item">
+          <div class="img-preview"><img src="<%= g.small || g.src %>" alt="" loading="lazy"></div>
+          <label>Тайлбар <input name="caption:<%= gi %>" value="<%= g.caption_mn %>" maxlength="100"></label>
+          <div class="g-actions">
+            <button type="button" class="a-btn a-btn-sm" data-pick>Солих</button>
+            <input type="file" accept="image/*" hidden data-upload data-slot="gallery" data-index="<%= gi %>" data-large="<%= gallerySizes.large %>" data-small="<%= gallerySizes.small %>">
+            <button type="button" class="a-btn a-btn-sm" data-gallery-move="up" data-index="<%= gi %>" aria-label="Өмнө нь шилжүүлэх"<%= gi === 0 ? ' disabled' : '' %>>←</button>
+            <button type="button" class="a-btn a-btn-sm" data-gallery-move="down" data-index="<%= gi %>" aria-label="Дараа нь шилжүүлэх"<%= gi === gallery.length - 1 ? ' disabled' : '' %>>→</button>
+            <button type="button" class="a-btn a-btn-sm a-btn-danger-ghost" data-gallery-delete data-index="<%= gi %>">Устгах</button>
+          </div>
+        </div>
+        <% }) %>
+        <% if (gallery.length < galleryMax) { %>
+        <div class="g-add">
+          <button type="button" class="g-add-btn" data-pick>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Зураг нэмэх
+          </button>
+          <input type="file" accept="image/*" hidden data-upload data-slot="gallery" data-large="<%= gallerySizes.large %>" data-small="<%= gallerySizes.small %>">
+        </div>
+        <% } %>
+      </div>
+      <p class="small muted">Эхний зураг том харагдана. Сумтай товчоор дарааллыг өөрчилнө. <button type="button" class="a-link" data-gallery-reset>Анхны зургууд руу буцаах</button></p>
+    <% } %>
+
+    <% if (s.policy) { %>
+      <p class="landing-note">ℹ︎ Сайтын <a href="/policy" target="_blank" rel="noopener">«Цуцлах нөхцөл» хуудсанд</a> харагдана. Захиалга хийхдээ үйлчлүүлэгч энэ нөхцөлийг зөвшөөрнө.<% if (policy.updated_at) { %> Сүүлд шинэчилсэн: <strong><%= policy.updated_at.replace(/-/g, '.') %></strong><% } %></p>
+      <div class="landing-fields">
+        <label class="is-wide"><span>Танилцуулга</span><textarea name="policy:intro" rows="3"><%= policy.intro_mn %></textarea></label>
+      </div>
+
+      <h3 class="repeat-heading">Гол дүрмүүд</h3>
+      <p class="small muted">Хуудасны дээд хэсэгт өнгөт карт болж харагдана. Хамгийн ихдээ <%= policyMax.highlight %>.</p>
+      <div class="repeat" data-repeat data-max="<%= policyMax.highlight %>">
+        <% policy.highlights.forEach((item, i) => { %><%- include('_policy-row', { kind: 'highlight', id: i, item }) %><% }) %>
+        <template data-repeat-template><%- include('_policy-row', { kind: 'highlight', id: '__ID__', item: { tone: 'good' } }) %></template>
+        <button type="button" class="a-btn a-btn-sm repeat-add" data-repeat-add>+ Дүрэм нэмэх</button>
+      </div>
+
+      <h3 class="repeat-heading">Дэлгэрэнгүй хэсгүүд</h3>
+      <p class="small muted">Дугаарласан гарчигтай хэсгүүд. Догол мөр тусгаарлахдаа хоосон мөр үлдээнэ.</p>
+      <div class="repeat" data-repeat data-max="<%= policyMax.section %>">
+        <% policy.sections.forEach((item, i) => { %><%- include('_policy-row', { kind: 'section', id: i, item }) %><% }) %>
+        <template data-repeat-template><%- include('_policy-row', { kind: 'section', id: '__ID__', item: {} }) %></template>
+        <button type="button" class="a-btn a-btn-sm repeat-add" data-repeat-add>+ Хэсэг нэмэх</button>
+      </div>
+    <% } %>
+
+    <% if (s.fields.length) { %>
+    <div class="landing-fields">
+      <% s.fields.forEach((f) => {
+           const name = `${f.store}:${f.key}`;
+           const v = value(f);
+           const wide = f.kind && f.kind !== 'line'; %>
+        <label<%- wide ? ' class="is-wide"' : '' %>>
+          <span><%= f.label %></span>
+          <% if (wide) { %>
+            <textarea name="<%= name %>" rows="<%= f.kind === 'faq' ? 14 : f.kind === 'lines' ? 5 : 3 %>"><%= v %></textarea>
+          <% } else { %>
+            <input name="<%= name %>" value="<%= v %>" maxlength="300"<%= f.required ? ' required' : '' %>>
+          <% } %>
+          <% if (f.hint) { %><small><%= f.hint %></small><% } %>
+        </label>
+      <% }) %>
+    </div>
+    <% } %>
+  </section>
+  <% }) %>
+
+  <div class="save-bar">
+    <span class="save-state" data-save-state>Хадгалаагүй өөрчлөлт байна</span>
+    <a class="a-btn" href="/" target="_blank" rel="noopener">Сайтаас харах ↗</a>
+    <button class="a-btn a-btn-primary" type="submit">Хадгалах</button>
+  </div>
+</form>
+
+<div class="a-toast" id="a-toast" role="status" aria-live="polite" hidden></div>
+
+<%- include('_bottom') %>

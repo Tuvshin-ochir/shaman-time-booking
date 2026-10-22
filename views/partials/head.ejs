@@ -1,0 +1,36 @@
+<%
+  const pageTitle = locals.title ? `${title} | ${business.name}` : `${business.name} — ${t('cta.book')}`;
+  const pageDescription = locals.description || business.tagline;
+  const ogImage = siteImage('og');
+%><!doctype html>
+<html lang="mn"<% if (theme) { %> data-theme="<%= theme %>"<% } %>>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title><%= pageTitle %></title>
+<meta name="description" content="<%= pageDescription %>">
+<link rel="canonical" href="<%= canonical %>">
+<meta name="theme-color" content="#0b5f63">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="<%= business.name %>">
+<meta property="og:title" content="<%= pageTitle %>">
+<meta property="og:description" content="<%= pageDescription %>">
+<meta property="og:url" content="<%= canonical %>">
+<meta property="og:image" content="<%= config.baseUrl %><%= ogImage.src %>">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="<%= ogImage.width %>">
+<meta property="og:image:height" content="<%= ogImage.height %>">
+<meta property="og:image:alt" content="<%= business.name %>">
+<meta property="og:locale" content="mn_MN">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="stylesheet" href="<%= asset('/assets/css/style.css') %>">
+<% if (locals.preloadHero) { const hero = siteImage('hero'); %>
+<link rel="preload" as="image" href="<%= asset(hero.small || hero.src) %>"<% if (srcset(hero)) { %> imagesrcset="<%= srcset(hero) %>" imagesizes="100vw"<% } %> fetchpriority="high">
+<% } %>
+</head>
+<body class="page-<%= locals.page || 'default' %><%= showStickyCta ? ' has-sticky' : '' %>">
+<a class="skip-link" href="#main">Агуулга руу шилжих</a>

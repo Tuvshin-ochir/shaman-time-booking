@@ -1,0 +1,77 @@
+<%- include('_top', { pageTitle: 'Хуваарь' }) %>
+
+<h1>Цагийн хуваарь</h1>
+
+<% if (errors.length) { %>
+<div class="a-alert a-alert-err" role="alert"><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div>
+<% } %>
+
+<form method="post" action="/admin/schedule" class="a-card a-form">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>Долоо хоногийн ажлын цаг</h2>
+  <div class="week">
+    <div class="week-head" aria-hidden="true"><span>Өдөр</span><span>Нээх</span><span>Хаах</span><span>Цайны цаг</span></div>
+    <% weekOrder.forEach((wd) => { const d = schedule.weekly[wd]; %>
+    <div class="week-row">
+      <label class="a-check week-day"><input type="checkbox" name="open_<%= wd %>"<%= d.open ? ' checked' : '' %>> <%= dayNames[wd] %></label>
+      <input type="time" name="start_<%= wd %>" value="<%= d.start %>" aria-label="<%= dayNames[wd] %> нээх" step="300">
+      <input type="time" name="end_<%= wd %>" value="<%= d.end %>" aria-label="<%= dayNames[wd] %> хаах" step="300">
+      <span class="week-break">
+        <input type="time" name="break_start_<%= wd %>" value="<%= d.break_start %>" aria-label="<%= dayNames[wd] %> цайны цаг эхлэх" step="300">
+        <span>–</span>
+        <input type="time" name="break_end_<%= wd %>" value="<%= d.break_end %>" aria-label="<%= dayNames[wd] %> цайны цаг дуусах" step="300">
+      </span>
+    </div>
+    <% }) %>
+  </div>
+  <p class="muted small">Цайны цаггүй бол хоосон үлдээнэ.</p>
+
+  <h2>Захиалгын дүрэм</h2>
+  <div class="rules">
+    <% [
+      ['slot_minutes', 'Цагийн алхам', 'мин', 5, 240, 'Цагуудын зай. 30 → 09:00, 09:30'],
+      ['lead_minutes', 'Урьдчилах хугацаа', 'мин', 0, 10080, 'Одооноос хойш хамгийн багадаа'],
+      ['window_days', 'Захиалах хугацаа', 'хоног', 1, 365, 'Хэдэн хоногийн өмнөөс захиалах'],
+      ['hold_minutes', 'Төлбөр хүлээх', 'мин', 5, 60, 'Төлөөгүй бол цаг суллагдана'],
+      ['capacity', 'Зэрэг үйлчлэх', 'хүн', 1, 50, '1 = давхар захиалга авахгүй'],
+    ].forEach(([name, label, unit, min, max, hint]) => { %>
+      <label class="rule">
+        <span class="rule-label"><%= label %></span>
+        <span class="unit-input">
+          <input type="number" name="<%= name %>" min="<%= min %>" max="<%= max %>" value="<%= schedule[name] %>" required>
+          <span class="unit" aria-hidden="true"><%= unit %></span>
+        </span>
+        <small><%= hint %></small>
+      </label>
+    <% }) %>
+  </div>
+  <button class="a-btn a-btn-primary" type="submit">Хадгалах</button>
+</form>
+
+<section class="a-card">
+  <h2>Амралтын өдрүүд</h2>
+  <p class="muted small">Эдгээр өдөр онлайн захиалга авахгүй. Олон хоног бол «хүртэл» огноог оруулна (жишээ: Цагаан сар, Наадам).</p>
+  <form method="post" action="/admin/holidays" class="a-form a-inline">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Эхлэх <input type="date" name="date_from" min="<%= today %>" required></label>
+    <label>Хүртэл <input type="date" name="date_to" min="<%= today %>"></label>
+    <label class="grow">Тайлбар <input name="note" maxlength="100" placeholder="Жишээ: Наадам"></label>
+    <button class="a-btn a-btn-primary" type="submit">Нэмэх</button>
+  </form>
+
+  <% if (holidays.length) { %>
+  <ul class="holiday-list">
+    <% holidays.forEach((h) => { %>
+      <li class="<%= h.date < today ? 'is-past' : '' %>">
+        <span><strong><%= formatDate(h.date) %></strong><% if (h.note) { %> · <%= h.note %><% } %></span>
+        <form method="post" action="/admin/holidays/<%= h.date %>/delete">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <button class="a-link a-link-danger" type="submit">Устгах</button>
+        </form>
+      </li>
+    <% }) %>
+  </ul>
+  <% } else { %><p class="a-empty">Амралтын өдөр бүртгэгдээгүй.</p><% } %>
+</section>
+
+<%- include('_bottom') %>

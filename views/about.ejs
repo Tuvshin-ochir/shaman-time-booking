@@ -1,0 +1,22 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<section class="section page-head">
+  <div class="container narrow">
+    <h1><%= title %></h1>
+  </div>
+</section>
+
+<section class="section section-tight">
+  <div class="container narrow prose">
+    <% const aboutImg = siteImage('about'); %>
+    <figure class="about-media">
+      <img src="<%= asset(aboutImg.small || aboutImg.src) %>"<% if (srcset(aboutImg)) { %> srcset="<%= srcset(aboutImg) %>" sizes="(min-width: 700px) 640px, 100vw"<% } %>
+           width="<%= aboutImg.width %>" height="<%= aboutImg.height %>" alt="">
+    </figure>
+    <%- paragraphs(content.about_mn) %>
+    <p><a class="btn btn-primary" href="/book"><%= t('cta.book') %></a></p>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

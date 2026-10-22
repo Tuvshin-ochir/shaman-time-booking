@@ -1,0 +1,57 @@
+<%- include('_top', { pageTitle: 'Захиалга' }) %>
+
+<div class="a-head">
+  <h1>Захиалга <small class="a-count"><%= total %></small></h1>
+  <div class="a-head-actions">
+    <a class="a-btn" href="/admin/bookings.csv?<%= qs %>">CSV татах</a>
+    <a class="a-btn a-btn-primary" href="/admin/bookings/new">+ Захиалга нэмэх</a>
+  </div>
+</div>
+
+<nav class="quick-filters" aria-label="Түргэн шүүлтүүр">
+  <a href="/admin/bookings?view=today&status=all"<% if (filters.view === 'today' && filters.status === 'all') { %> aria-current="true"<% } %>>Өнөөдөр</a>
+  <a href="/admin/bookings?view=upcoming&status=active"<% if (filters.view === 'upcoming' && filters.status === 'active') { %> aria-current="true"<% } %>>Ирэх</a>
+  <a href="/admin/bookings?view=all&status=paid"<% if (filters.view === 'all' && filters.status === 'paid') { %> aria-current="true"<% } %>>Төлсөн</a>
+  <a href="/admin/bookings?view=all&status=cancelled"<% if (filters.view === 'all' && filters.status === 'cancelled') { %> aria-current="true"<% } %>>Цуцалсан</a>
+  <a href="/admin/bookings?view=all&status=refund"<% if (filters.status === 'refund') { %> aria-current="true"<% } %>>Буцаалт хийх</a>
+</nav>
+
+<form class="filters" method="get" action="/admin/bookings">
+  <label>Хугацаа
+    <select name="view" data-toggle-date>
+      <% [['today','Өнөөдөр'],['upcoming','Өнөөдрөөс хойш'],['past','Өнгөрсөн'],['date','Тодорхой өдөр'],['all','Бүх хугацаа']].forEach(([v, l]) => { %>
+        <option value="<%= v %>"<%= filters.view === v ? ' selected' : '' %>><%= l %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label data-date-field<% if (filters.view !== 'date') { %> hidden<% } %>>Өдөр
+    <input type="date" name="date" value="<%= filters.date %>">
+  </label>
+  <label>Төлөв
+    <select name="status">
+      <% [['active','Идэвхтэй (баталгаажсан + хүлээгдэж буй)'],['confirmed','Баталгаажсан'],['paid','Төлсөн'],['pending','Төлбөр хүлээгдэж буй'],['cancelled','Цуцалсан'],['expired','Хугацаа дууссан'],['refund','Буцаалт хийх'],['all','Бүгд']].forEach(([v, l]) => { %>
+        <option value="<%= v %>"<%= filters.status === v ? ' selected' : '' %>><%= l %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label class="grow">Хайх
+    <input type="search" name="q" value="<%= filters.q %>" placeholder="Нэр, утас, код">
+  </label>
+  <button class="a-btn a-btn-primary" type="submit">Шүүх</button>
+</form>
+
+<% if (rows.length) { %>
+  <%- include('_rows', { rows }) %>
+<% } else { %>
+  <p class="a-empty">Захиалга олдсонгүй.</p>
+<% } %>
+
+<% if (pages > 1) { %>
+<nav class="pager">
+  <% if (page > 1) { %><a class="a-btn" href="?<%= qs %>&page=<%= page - 1 %>">← Өмнөх</a><% } %>
+  <span><%= page %> / <%= pages %></span>
+  <% if (page < pages) { %><a class="a-btn" href="?<%= qs %>&page=<%= page + 1 %>">Дараах →</a><% } %>
+</nav>
+<% } %>
+
+<%- include('_bottom') %>

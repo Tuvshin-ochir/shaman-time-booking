@@ -1,0 +1,20 @@
+[Unit]
+Description=Time booking (Node.js)
+After=network.target
+
+[Service]
+Type=simple
+User=booking
+WorkingDirectory=/srv/time-booking/app
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/time-booking
+
+[Install]
+WantedBy=multi-user.target
