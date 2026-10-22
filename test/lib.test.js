@@ -161,7 +161,7 @@ test('sun and moon over Ulaanbaatar', () => {
   assert.ok(Math.min(phase, 1 - phase) < 0.03, String(phase));
 });
 
-test('WeSend: POST with the API key, failures are logged with the reason', async () => {
+test('WeSend: POST with the API key, failures are logged, the deploy check reads the balance', async () => {
   const { default: config } = await import('../src/config.js');
   const sms = await import('../src/lib/sms.js');
   const saved = { ...config.sms };
@@ -192,6 +192,17 @@ test('WeSend: POST with the API key, failures are logged with the reason', async
     config.sms.apiKey = '';
     assert.equal((await sms.send('99112233', 'Test')).ok, false);
     assert.equal(calls.length, 2); // no request without a key
+    assert.equal((await sms.checkProvider()).ok, false);
+
+    // The deploy check asks for the balance (no SMS is sent).
+    config.sms.apiKey = 'test-key';
+    reply = { status: 200, body: '{"balance":1600}' };
+    assert.deepEqual(await sms.checkProvider(), { ok: true, detail: 'WeSend түлхүүр ажиллаж байна, үлдэгдэл 1600 кредит', balance: 1600 });
+    assert.equal(calls.at(-1).url, 'https://api.wesend.mn/v1/balance');
+    reply = { status: 401, body: '{"error":{"code":"invalid_api_key"}}' };
+    const bad = await sms.checkProvider();
+    assert.equal(bad.ok, false);
+    assert.match(bad.detail, /401.*invalid_api_key/);
   } finally {
     globalThis.fetch = realFetch;
     Object.assign(config.sms, saved);

@@ -173,4 +173,12 @@ async function cancelInvoice(invoiceId) {
 
 const mockPay = (invoiceId) => mock.pay(invoiceId);
 
-export { createInvoice, checkPayment, cancelInvoice, isMock, mockPay };
+// Logs in to QPay with a fresh token, which proves the credentials work
+// (scripts/check-services.js). Throws with QPay's answer when they do not.
+async function checkAuth() {
+  if (isMock()) return 'mock';
+  await accessToken({ force: true });
+  return 'ok';
+}
+
+export { createInvoice, checkPayment, cancelInvoice, isMock, mockPay, checkAuth };
