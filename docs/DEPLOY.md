@@ -1,6 +1,80 @@
 # Серверт байршуулах
 
-Жишээ: Ubuntu 22.04/24.04 VPS, домэйн `www.example.mn` (Datacom-д бүртгэлтэй). Апп нь Next.js сервер (`next start`) болж ажиллаж, түүний өмнө nginx (SSL, gzip) байрлана. Өгөгдөл нь серверийн диск дээрх SQLite файлд хадгалагдах тул Vercel зэрэг serverless орчинд биш, өөрийн VPS дээр байршуулна.
+Өгөгдөл нь серверийн диск дээрх SQLite файлд хадгалагдах тул Vercel зэрэг serverless орчинд биш, байнгын дисктэй сервер дээр байршуулна. Хоёр арга бий:
+
+- **Railway (Docker)**: GitHub-д push хийхэд тест ажиллаж, QPay, WeSend шалгагдаад автоматаар шинэчлэгдэнэ. Доорх эхний хэсгийг үзнэ үү.
+- **Өөрийн VPS**: Ubuntu, nginx, systemd. 1-р хэсгээс эхэлнэ.
+
+## Railway (Docker)
+
+Төсөлд бэлэн байгаа файлууд:
+
+| Файл | Үүрэг |
+|---|---|
+| `Dockerfile` | Апп-ыг build хийж ажиллуулна. Өгөгдөл `/data` хавтсанд хадгалагдана (`DATA_DIR=/data`). |
+| `railway.json` | Railway-ийн тохиргоо: Dockerfile-аар build хийх, deploy-ийн өмнөх шалгалт, `/healthz` шалгалт. |
+| `.github/workflows/ci.yml` | GitHub Actions: push бүрд unit, e2e тест болон Docker image-ийн шалгалт. |
+| `scripts/check-services.js` | Deploy бүрийн өмнө тохиргоо, QPay, WeSend-ийг шалгана (`npm run check:services`). |
+
+### Push хийхэд юу болох вэ
+
+1. **GitHub Actions** (`ci.yml`) ажиллана:
+   - unit тест;
+   - e2e тест (апп-ыг build хийж, захиалга, төлбөр, админы урсгалыг шалгана);
+   - Docker image build хийж, асаагаад хуудсуудыг нээж үзнэ.
+2. Тест бүгд амжилттай бол **Railway** Dockerfile-аар шинэ хувилбарыг build хийнэ. Ингэхийн тулд доорх 5-р алхмын «Wait for CI» асаалттай байх ёстой.
+3. **Deploy-ийн өмнөх шалгалт** (`node scripts/check-services.js`) Railway-ийн жинхэнэ хувьсагчидтай ажиллана. SMS илгээхгүй, нэхэмжлэх үүсгэхгүй:
+   - тохиргоо бүрэн эсэх (`SESSION_SECRET`, QPay түлхүүрүүд);
+   - `QPAY_MODE` нь `mock` биш, `BASE_URL` нь жинхэнэ `https` хаяг эсэх;
+   - QPay-д түлхүүрээрээ нэвтэрч чадаж байгаа эсэх;
+   - WeSend түлхүүр ажиллаж байгаа эсэх, үлдэгдэл кредит. 10-аас цөөн SMS-ийн кредит үлдвэл анхааруулна, гэхдээ deploy-г зогсоохгүй.
+
+   Аль нэг нь бүтэлгүйтвэл deploy зогсож, одоо ажиллаж байгаа хувилбар хэвээр үлдэнэ. Шалтгааныг Railway → Deployments → тухайн deploy-ийн лог дээр харна.
+4. Шинэ хувилбар асаж `/healthz` нь `ok` буцаасны дараа л хэрэглэгчид рүү шилжинэ.
+
+### Анх тохируулах
+
+1. https://railway.com → **New Project → Deploy from GitHub repo** → `shaman-time-booking`-г сонгоно. Service → **Settings → Source → Branch**-аас deploy хийх салбараа (`main` эсвэл `nextjs`) сонгоно.
+2. **Volume**: service дээр баруун товшоод **Attach Volume** → Mount path: `/data`. Үүнгүйгээр deploy бүрт захиалга, зураг устна.
+3. **Variables** таб (`.env`-ийн утгуудыг хуулна):
+
+   ```ini
+   BASE_URL=https://www.example.mn        # сайтын жинхэнэ хаяг (доорх 6-р алхам)
+   SESSION_SECRET=<openssl rand -hex 32>
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=<10+ тэмдэгт, анх асаахад л ашиглагдана>
+   QPAY_MODE=live
+   QPAY_CLIENT_ID=...
+   QPAY_CLIENT_SECRET=...
+   QPAY_INVOICE_CODE=...
+   SMS_PROVIDER=wesend
+   SMS_API_KEY=...
+   ```
+
+   `NODE_ENV`, `DATA_DIR`, `PORT`-ийг Dockerfile болон Railway өөрөө тохируулна. Тэдгээрийг нэмэх шаардлагагүй.
+4. **Settings → Deploy**:
+   - **Replicas** 1 байна (SQLite нэг л серверт ажиллана).
+   - **App Sleeping (Serverless)** унтраалттай байна. Төлбөр шалгах, цаг суллах, сануулга SMS илгээх ажлууд апп дотор байнга ажилладаг.
+5. **Settings → Source → Wait for CI**-г асаана. GitHub Actions-ийн тест амжилтгүй бол Railway deploy хийхгүй.
+6. **Settings → Networking**:
+   - **Generate Domain** (`*.up.railway.app`), эсвэл **Custom Domain**-д `www.example.mn` нэмнэ.
+   - Custom domain бол Railway-ийн өгсөн CNAME бичлэгийг Datacom-ийн DNS тохиргоонд нэмнэ (4-р хэсгийг үзнэ үү). SSL сертификатыг Railway өөрөө гаргана.
+   - `BASE_URL` нь энэ хаягтай яг ижил байна. QPay төлбөрийн мэдэгдлийг `BASE_URL/qpay/callback` руу илгээдэг.
+7. Анхны deploy амжилттай болсны дараа `ADMIN_PASSWORD`-ийг Variables-аас устгаж болно. Админ хэрэглэгч өгөгдлийн санд хадгалагдсан байгаа.
+
+### Өдөр тутам
+
+- **Шинэчлэх**: `git push` хийхэд л хангалттай.
+- **Шалгалтыг гараар ажиллуулах**: `railway run npm run check:services`, эсвэл локалд `.env`-тэйгээр `npm run check:services`.
+- **Нөөц хуулбар**:
+  - Апп өдөр бүр `/data/backups/`-д хуулбар үүсгэдэг ч энэ нь мөн л тэр volume дээр хадгалагдана.
+  - Админ самбар → Тохиргоо → «Өгөгдлийн сангийн хуулбар татах»-аар үе үе компьютертоо татаж авна.
+  - Railway-ийн volume backup-ийг асааж болно.
+- **Нууц үг сэргээх**: `railway ssh` → `npm run admin:password -- admin '<шинэ нууц үг>'`.
+
+Доорх 1–7-р хэсэг нь өөрийн VPS-д зориулсан.
+
+Жишээ: Ubuntu 22.04/24.04 VPS, домэйн `www.example.mn` (Datacom-д бүртгэлтэй). Апп нь Next.js сервер (`next start`) болж ажиллаж, түүний өмнө nginx (SSL, gzip) байрлана.
 
 ## 1. Шаардлага
 

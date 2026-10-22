@@ -30,6 +30,7 @@ function fill(template, vars, encode) {
 
 // WeSend (wesend.mn) needs only the API key: https://wesend.mn/docs/sms
 const WESEND_URL = 'https://api.wesend.mn/v1/sms';
+const WESEND_BALANCE_URL = 'https://api.wesend.mn/v1/balance';
 
 async function deliver(to, text) {
   const sms = config.sms;
@@ -90,4 +91,27 @@ async function send(to, body, { bookingId = null, kind = 'manual' } = {}) {
   return { id: Number(info.lastInsertRowid), ok: result.ok };
 }
 
-export { send, transliterate };
+// Checks the gateway without sending an SMS (scripts/check-services.js).
+// For WeSend the balance call proves the key works. Returns { ok, detail, balance }.
+async function checkProvider() {
+  const sms = config.sms;
+  if (sms.provider === 'console') return { ok: true, detail: 'console: SMS илгээхгүй, зөвхөн лог руу бичнэ' };
+  if (sms.provider === 'http') return { ok: !!sms.url, detail: sms.url ? 'http: түлхүүрийг шалгах боломжгүй' : 'SMS_HTTP_URL хоосон' };
+  if (sms.provider !== 'wesend') return { ok: false, detail: `SMS_PROVIDER буруу: ${sms.provider}` };
+  if (!sms.apiKey) return { ok: false, detail: 'SMS_API_KEY (WeSend-ийн API түлхүүр) хоосон' };
+  const res = await fetch(WESEND_BALANCE_URL, {
+    headers: { Authorization: `Bearer ${sms.apiKey}`, Accept: 'application/json' },
+    signal: AbortSignal.timeout(15000),
+  });
+  const text = await res.text();
+  if (!res.ok) return { ok: false, detail: `WeSend ${res.status}: ${text.slice(0, 200)}` };
+  let balance = null;
+  try {
+    balance = Number(JSON.parse(text).balance);
+  } catch {
+    // keep null: the key still worked
+  }
+  return { ok: true, detail: `WeSend түлхүүр ажиллаж байна, үлдэгдэл ${balance ?? '?'} кредит`, balance };
+}
+
+export { send, transliterate, checkProvider };

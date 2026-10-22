@@ -1,0 +1,55 @@
+# Runs on every push and pull request. Railway deploys only after these pass
+# ("Wait for CI" in the Railway service settings, see docs/DEPLOY.md); QPay and
+# WeSend are then checked by Railway itself with the real keys (railway.json).
+name: CI
+
+on:
+  push:
+    branches: [main, nextjs]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (unit + e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: End-to-end tests (builds the app)
+        run: npm run test:e2e
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t time-booking .
+      - name: Start the image and open a few pages
+        run: |
+          docker run -d --name app -p 3000:3000 \
+            -e SESSION_SECRET=ci-session-secret \
+            -e ADMIN_PASSWORD=ci-password-123 \
+            -e QPAY_MODE=mock -e SMS_PROVIDER=console \
+            -e BASE_URL=http://localhost:3000 \
+            time-booking
+          for i in $(seq 1 30); do curl -fsS http://localhost:3000/healthz && break; sleep 2; done
+          curl -fsS http://localhost:3000/healthz
+          for page in / /services /book /news /admin/login /admin/guide; do
+            curl -fsS -o /dev/null -w "%{http_code} $page\n" "http://localhost:3000$page"
+          done
+      - name: Container log
+        if: always()
+        run: docker logs app || true
