@@ -1,0 +1,42 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec), see docs/DEPLOY.md.
+# Render builds the Dockerfile, deploys only after the GitHub Actions checks
+# pass, runs scripts/check-services.js (settings, QPay login, WeSend balance)
+# before each deploy, and switches traffic once /healthz answers.
+services:
+  - type: web
+    name: time-booking
+    runtime: docker
+    # Starter: 0.5 CPU, 512 MB. The free plan sleeps and has no disk.
+    plan: 0.5c-512mb
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    preDeployCommand: node scripts/check-services.js
+    autoDeployTrigger: checksPass
+    # The SQLite database, uploaded pictures and backups (DATA_DIR=/data).
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      # Asked once when the Blueprint is created (sync: false).
+      - key: BASE_URL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: QPAY_CLIENT_ID
+        sync: false
+      - key: QPAY_CLIENT_SECRET
+        sync: false
+      - key: QPAY_INVOICE_CODE
+        sync: false
+      - key: SMS_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: QPAY_MODE
+        value: live
+      - key: SMS_PROVIDER
+        value: wesend
