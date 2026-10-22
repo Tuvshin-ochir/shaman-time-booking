@@ -28,11 +28,15 @@ export const ERRORS = {
   service: 'Үйлчилгээ олдсонгүй.',
   slot_taken: 'Энэ цаг өөр захиалгатай давхцаж байна. Өөр цаг сонгох эсвэл «Давхцлыг үл тоох»-г чагтална уу.',
   day_closed: 'Энэ өдөр захиалга авахгүй.',
+  meeting: 'Биеэр эсвэл онлайнаар гэдгийг сонгоно уу.',
   not_active: 'Энэ захиалга идэвхгүй (цуцлагдсан эсвэл хугацаа дууссан) байна.',
   not_found: 'Олдсонгүй.',
   amount: 'Дүн буруу байна.',
   sms_kind: 'SMS-ийн төрөл буруу.',
 };
+
+// bookings.meeting: how the customer is served.
+export const MEETING_LABELS = { in_person: 'Биеэр', online: 'Онлайн' };
 
 export const STATUS_LABELS = {
   pending: 'Төлбөр хүлээгдэж буй',

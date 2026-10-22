@@ -1,7 +1,7 @@
 import { db } from '@/db.js';
 import * as bookings from '@/lib/bookings.js';
 import { bookingQuery } from '@/lib/admin-bookings.js';
-import { STATUS_LABELS } from '@/lib/admin-messages.js';
+import { STATUS_LABELS, MEETING_LABELS } from '@/lib/admin-messages.js';
 import { currentAdmin } from '@/lib/admin.js';
 import { nowLocal, fromMin } from '@/lib/time.js';
 
@@ -16,13 +16,14 @@ export async function GET(request) {
   if (!(await currentAdmin())) return new Response(null, { status: 303, headers: { Location: '/admin/login' } });
   const { sql, order, params } = bookingQuery(Object.fromEntries(request.nextUrl.searchParams));
   const rows = db().prepare(`SELECT * ${sql} ORDER BY ${order}`).all(...params);
-  const header = ['Код', 'Огноо', 'Цаг', 'Үйлчилгээ', 'Нэр', 'Утас', 'Төлөв', 'Үнэ', 'Төлсөн', 'Буцаалт', 'Эх сурвалж', 'Тайлбар'];
+  const header = ['Код', 'Огноо', 'Цаг', 'Үйлчилгээ', 'Хэлбэр', 'Нэр', 'Утас', 'Төлөв', 'Үнэ', 'Төлсөн', 'Буцаалт', 'Эх сурвалж', 'Тайлбар'];
   const lines = rows.map((b) =>
     [
       b.code,
       b.date,
       b.day_only ? '' : fromMin(b.start_min),
       b.service_name,
+      MEETING_LABELS[b.meeting] || '',
       b.customer_name,
       b.phone,
       STATUS_LABELS[bookings.effectiveStatus(b)],

@@ -12,8 +12,10 @@ function vars(booking) {
     date: booking.date.replace(/-/g, '.'),
     // Day-only bookings (special services) have no time; render() drops {time}.
     time: booking.day_only ? '' : fromMin(booking.start_min),
+    mode: booking.meeting === 'online' ? 'онлайнаар' : 'биеэр',
     service: booking.service_name,
-    address: business.address,
+    // An online customer does not come to the address.
+    address: booking.meeting === 'online' ? 'онлайн' : business.address,
     contact: business.phone,
     code: booking.code,
   };

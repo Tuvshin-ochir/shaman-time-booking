@@ -38,6 +38,8 @@ export default async function BookPage({ searchParams }) {
     [
       'book.noscript', 'book.step_service', 'book.step_contact', 'book.step_confirm',
       'book.name', 'book.name_ph', 'book.phone', 'book.phone_ph', 'book.phone_hint', 'book.note',
+      'book.meeting', 'book.meeting_in_person', 'book.meeting_in_person_hint', 'book.meeting_online',
+      'book.meeting_online_hint', 'book.summary_meeting',
       'book.summary_service', 'book.summary_price', 'book.summary_pay_now',
       'book.summary_balance', 'book.agree', 'book.read_policy', 'book.submit',
     ].map((key) => [key, t(key)])
@@ -63,6 +65,7 @@ export default async function BookPage({ searchParams }) {
     dayLabel: t('book.summary_day'),
     dayOnly: t('services.day_only'),
     errAgree: t('err.agree'),
+    errMeeting: t('err.meeting'),
     errGeneric: t('err.generic'),
     submit: t('book.submit'),
     submitFree: t('book.submit_free'),

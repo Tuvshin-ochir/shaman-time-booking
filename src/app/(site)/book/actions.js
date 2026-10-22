@@ -16,6 +16,8 @@ export async function submitBooking(formData) {
   const t = siteTranslator();
   if (!bookLimit(clientIp(await headers())).ok) return { error: t('err.rate'), code: 'rate' };
   if (!formData.get('agree')) return { error: t('err.agree'), code: 'agree' };
+  // The customer has to choose: there is no default between in person and online.
+  if (!formData.get('meeting')) return { error: t('err.meeting'), code: 'meeting' };
 
   let target;
   try {
@@ -26,6 +28,7 @@ export async function submitBooking(formData) {
       name: field(formData.get('name')),
       phone: field(formData.get('phone')),
       note: field(formData.get('note')),
+      meeting: field(formData.get('meeting')),
       ip: clientIp(await headers()),
     });
     const result = await bookings.startPayment(booking);

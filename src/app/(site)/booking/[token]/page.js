@@ -23,6 +23,7 @@ export default async function BookingPage({ params }) {
   const t = siteTranslator();
   const business = settings.get('business');
   const tel = telHref(business.phone);
+  const online = booking.meeting === 'online';
 
   return (
     <SitePage page="booking" path={`/booking/${booking.token}`} sticky={status !== 'confirmed' && status !== 'pending'}>
@@ -57,9 +58,16 @@ export default async function BookingPage({ params }) {
                 </dd>
               </div>
               <div>
-                <dt>{t('booking.address')}</dt>
-                <dd>{business.address}</dd>
+                <dt>{t('booking.meeting')}</dt>
+                <dd>{t(`book.meeting_${online ? 'online' : 'in_person'}`)}</dd>
               </div>
+              {/* An online customer does not come to the address. */}
+              {!online && (
+                <div>
+                  <dt>{t('booking.address')}</dt>
+                  <dd>{business.address}</dd>
+                </div>
+              )}
               {booking.paid_amount > 0 && (
                 <div>
                   <dt>{t('booking.paid')}</dt>
@@ -76,12 +84,16 @@ export default async function BookingPage({ params }) {
 
             {status === 'confirmed' ? (
               <>
-                {!booking.day_only && <p className="hint">{t('booking.arrive_note')}</p>}
+                {online ? (
+                  <p className="hint">{t('booking.online_note')}</p>
+                ) : (
+                  !booking.day_only && <p className="hint">{t('booking.arrive_note')}</p>
+                )}
                 <div className="actions">
                   <a className="btn btn-secondary" href={`/booking/${booking.token}/calendar.ics`}>
                     {t('booking.add_calendar')}
                   </a>{' '}
-                  {business.map_url && (
+                  {business.map_url && !online && (
                     <a className="btn btn-ghost" href={business.map_url} target="_blank" rel="noopener">
                       {t('contact.map')}
                     </a>

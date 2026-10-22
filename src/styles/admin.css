@@ -255,6 +255,10 @@ input[type="checkbox"] { width: 18px; height: 18px; padding: 0; accent-color: va
 .kind-option small { color: var(--muted); font-size: 0.8125rem; line-height: 1.4; }
 @media (min-width: 560px) { .kind-picker { grid-template-columns: 1fr 1fr; } .kind-picker legend { grid-column: 1 / -1; } }
 .badge-special { background: #f3e8ff; color: #6b21a8; }
+.badge-online { background: #e0f2fe; color: #075985; }
+.a-radios { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; border: 0; }
+.a-radios legend { width: 100%; padding: 0; margin-bottom: 5px; font-weight: 600; font-size: 0.875rem; }
+.a-radios input[type="radio"] { width: 18px; height: 18px; padding: 0; accent-color: var(--brand); }
 .a-row { display: grid; gap: 12px; }
 .a-grid { display: grid; gap: 14px; margin-bottom: 14px; }
 .a-inline { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }

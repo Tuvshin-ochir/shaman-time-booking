@@ -36,7 +36,8 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
   const [dayLabel, setDayLabel] = useState('');
   const [showTime, setShowTime] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [errors, setErrors] = useState({ name: '', phone: '', form: '' });
+  const [meeting, setMeeting] = useState('');
+  const [errors, setErrors] = useState({ name: '', phone: '', meeting: '', form: '' });
   const [serverError, setServerError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [, startTransition] = useTransition();
@@ -169,6 +170,7 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
     if (!chosen) problems.push(['form', dayOnly ? S.errDay : S.errTime, refs.time]);
     if (name.trim().length < 2) problems.push(['name', S.errName, refs.contact]);
     if (!normalizePhone(phone)) problems.push(['phone', S.errPhone, refs.contact]);
+    if (!meeting) problems.push(['meeting', S.errMeeting, refs.contact]);
     if (!agree && chosen) problems.push(['form', S.errAgree, refs.confirm]);
     if (problems.length) {
       problems.forEach(([key, message]) => setError(key, message));
@@ -326,6 +328,34 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
               {errors.phone}
             </p>
           </div>
+          <div className="field" role="radiogroup" aria-labelledby="meeting-label">
+            <p className="field-label" id="meeting-label">
+              {L['book.meeting']}
+            </p>
+            <div className="options meeting-options">
+              {['in_person', 'online'].map((value) => (
+                <label key={value} className="option">
+                  <input
+                    type="radio"
+                    name="meeting"
+                    value={value}
+                    checked={meeting === value}
+                    onChange={() => {
+                      setMeeting(value);
+                      setError('meeting', '');
+                    }}
+                  />
+                  <span className="option-body">
+                    <span className="option-title">{L[`book.meeting_${value}`]}</span>
+                    <span className="option-desc">{L[`book.meeting_${value}_hint`]}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="field-error" id="meeting-error" hidden={!errors.meeting}>
+              {errors.meeting}
+            </p>
+          </div>
           <div className="field">
             <label htmlFor="f-note">{L['book.note']}</label>
             <textarea id="f-note" name="note" rows={2} maxLength={500}></textarea>
@@ -347,6 +377,10 @@ export default function BookForm({ services, form, labels: L, strings: S }) {
             <div>
               <dt>{dayOnly ? S.dayLabel : S.whenLabel}</dt>
               <dd id="sum-when">{!service ? '' : dayOnly ? (date ? label : '—') : time ? `${label}, ${time}` : '—'}</dd>
+            </div>
+            <div>
+              <dt>{L['book.summary_meeting']}</dt>
+              <dd id="sum-meeting">{meeting ? L[`book.meeting_${meeting}`] : '—'}</dd>
             </div>
             <div>
               <dt>{L['book.summary_price']}</dt>

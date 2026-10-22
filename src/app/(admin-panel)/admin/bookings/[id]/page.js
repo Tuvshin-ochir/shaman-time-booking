@@ -4,7 +4,7 @@ import * as bookings from '@/lib/bookings.js';
 import { formatWhen, formatPrice } from '@/i18n/index.js';
 import { fromMin } from '@/lib/time.js';
 import { formatPhone } from '@/lib/phone.js';
-import { EVENT_LABELS } from '@/lib/admin-messages.js';
+import { EVENT_LABELS, MEETING_LABELS } from '@/lib/admin-messages.js';
 import { requireAdmin, adminMetadata, formatTs } from '@/lib/admin.js';
 import ActionForm from '@/components/admin/ActionForm.js';
 import SlotPicker from '@/components/admin/SlotPicker.js';
@@ -57,6 +57,10 @@ export default async function BookingPage({ params }) {
             </dd>
             <dt>Үйлчилгээ</dt>
             <dd>{booking.service_name}</dd>
+            <dt>Хэлбэр</dt>
+            <dd>
+              {booking.meeting === 'online' ? <span className="badge badge-online">{MEETING_LABELS.online}</span> : MEETING_LABELS.in_person}
+            </dd>
             <dt>Нэр</dt>
             <dd>{booking.customer_name}</dd>
             <dt>Утас</dt>

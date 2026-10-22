@@ -96,7 +96,10 @@ export default async function SettingsPage() {
         </label>
 
         <h3>SMS загвар</h3>
-        <p className="muted small">Орлуулагдах үгс: {'{business} {name} {phone} {date} {time} {service} {address} {contact} {code}'}</p>
+        <p className="muted small">
+          Орлуулагдах үгс: {'{business} {name} {phone} {date} {time} {mode} {service} {address} {contact} {code}'}. {'{mode}'} нь «биеэр» эсвэл
+          «онлайнаар» болно.
+        </p>
         {TEMPLATES.map(([key, label]) => (
           <label key={key}>
             {label} <textarea name={`tpl_${key}`} rows={2} maxLength={500} defaultValue={smsSettings.templates[key]}></textarea>

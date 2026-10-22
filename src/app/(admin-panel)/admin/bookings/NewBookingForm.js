@@ -1,5 +1,6 @@
 import { db } from '@/db.js';
 import { formatPrice } from '@/i18n/index.js';
+import { MEETING_LABELS } from '@/lib/admin-messages.js';
 import ActionForm from '@/components/admin/ActionForm.js';
 import SlotPicker from '@/components/admin/SlotPicker.js';
 import { createBooking } from './actions.js';
@@ -32,6 +33,14 @@ export default function NewBookingForm({ date }) {
             Утас <input name="phone" type="tel" inputMode="numeric" required maxLength={16} placeholder="99112233" />
           </label>
         </div>
+        <fieldset className="a-radios">
+          <legend>Хэлбэр</legend>
+          {Object.entries(MEETING_LABELS).map(([value, label]) => (
+            <label key={value} className="a-check">
+              <input type="radio" name="meeting" value={value} defaultChecked={value === 'in_person'} /> {label}
+            </label>
+          ))}
+        </fieldset>
         <label>
           Тайлбар <input name="note" maxLength={500} />
         </label>

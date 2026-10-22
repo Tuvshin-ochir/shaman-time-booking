@@ -152,6 +152,8 @@ const MIGRATIONS = [
   ALTER TABLE services ADD COLUMN kind TEXT NOT NULL DEFAULT 'regular';
   ALTER TABLE bookings ADD COLUMN day_only INTEGER NOT NULL DEFAULT 0;
   `,
+  // How the customer is served: 'in_person' (comes to the address) or 'online'.
+  `ALTER TABLE bookings ADD COLUMN meeting TEXT NOT NULL DEFAULT 'in_person';`,
 ];
 
 // { db, path } of the open connection.

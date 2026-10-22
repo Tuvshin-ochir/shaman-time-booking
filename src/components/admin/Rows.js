@@ -20,7 +20,15 @@ export default function Rows({ rows, showDate = true }) {
               {formatPhone(b.phone)} · <span className="mono">{b.code}</span>
             </small>
           </span>
-          <span className="b-what">{b.service_name}</span>
+          <span className="b-what">
+            {b.service_name}
+            {b.meeting === 'online' && (
+              <>
+                {' '}
+                <span className="badge badge-online">Онлайн</span>
+              </>
+            )}
+          </span>
           <span className="b-status">
             <Badge b={b} />
           </span>

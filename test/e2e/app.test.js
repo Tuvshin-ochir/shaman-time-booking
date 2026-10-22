@@ -76,7 +76,7 @@ test('full booking flow: hold -> pay -> confirmed, double booking rejected', asy
   const serviceId = firstServiceId();
   const slot = await firstFreeSlot(serviceId);
 
-  const res = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '9911 4455', agree: '1' });
+  const res = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '9911 4455', meeting: 'in_person', agree: '1' });
   assert.equal(res.status, 303);
   const payUrl = res.headers.get('location');
   assert.match(payUrl, /^\/pay\/[\w-]+$/);
@@ -87,7 +87,7 @@ test('full booking flow: hold -> pay -> confirmed, double booking rejected', asy
   assert.equal(payPage.headers.get('x-robots-tag'), 'noindex');
 
   // Same slot, different customer -> rejected (the form is shown again).
-  const dup = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Дорж', phone: '88114455', agree: '1' });
+  const dup = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Дорж', phone: '88114455', meeting: 'in_person', agree: '1' });
   assert.notEqual(dup.status, 303);
   assert.equal(one(`SELECT COUNT(*) AS n FROM bookings WHERE phone = '88114455'`).n, 0);
 
@@ -112,10 +112,13 @@ test('booking form validates input', async () => {
   const serviceId = firstServiceId();
   const slot = await firstFreeSlot(serviceId, 1);
   const before = one('SELECT COUNT(*) AS n FROM bookings').n;
-  const badPhone = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '12345', agree: '1' });
+  const badPhone = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '12345', meeting: 'in_person', agree: '1' });
   assert.notEqual(badPhone.status, 303);
-  const noAgree = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '99114456' });
+  const noAgree = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '99114456', meeting: 'in_person' });
   assert.notEqual(noAgree.status, 303);
+  // In person or online has to be chosen; there is no default.
+  const noMeeting = await web.submit('/book', 'id="book-form"', { service_id: serviceId, ...slot, name: 'Болд', phone: '99114456', agree: '1' });
+  assert.notEqual(noMeeting.status, 303);
   assert.equal(one('SELECT COUNT(*) AS n FROM bookings').n, before);
 });
 
@@ -325,17 +328,21 @@ test('special service: added as «Тусгай», booked by day only on the site
   const { days } = await (await web.get(`/api/days?service=${s.id}`)).json();
   const day = days.find((d) => d.free > 0);
   assert.deepEqual((await (await web.get(`/api/slots?service=${s.id}&date=${day.date}`)).json()).times, []);
-  const res = await web.submit('/book', 'id="book-form"', { service_id: s.id, date: day.date, name: 'Өдрийн', phone: '99114470', agree: '1' });
+  const res = await web.submit('/book', 'id="book-form"', { service_id: s.id, date: day.date, name: 'Өдрийн', phone: '99114470', meeting: 'online', agree: '1' });
   assert.equal(res.status, 303);
   const token = res.headers.get('location').split('/').pop();
   const row = one('SELECT * FROM bookings WHERE token = ?', token);
   assert.equal(row.day_only, 1);
   assert.equal(row.start_min, 0);
+  assert.equal(row.meeting, 'online');
 
   await fetch(`${server.base}/mock/pay/${token}`, { method: 'POST', redirect: 'manual' });
   const page = await (await web.get(`/booking/${token}`)).text();
   assert.match(page, /Захиалга баталгаажлаа/);
   assert.match(page, /<dt>Өдөр<\/dt>/);
+  // Online: the booking page says so and leaves out the address.
+  assert.match(page, /<dt>Хэлбэр<\/dt><dd>Онлайнаар<\/dd>/);
+  assert.doesNotMatch(page, /<dt>Хаяг<\/dt>/);
   assert.match(await (await web.get(`/booking/${token}/calendar.ics`)).text(), new RegExp(`DTSTART;VALUE=DATE:${day.date.replace(/-/g, '')}`));
 
   // Admin: a manual booking of the special service needs no time either.

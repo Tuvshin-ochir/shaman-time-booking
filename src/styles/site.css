@@ -476,6 +476,11 @@ p { margin: 0 0 1em; }
 .field { display: grid; gap: 6px; margin-bottom: 14px; }
 .field:last-child { margin-bottom: 0; }
 .field label { font-weight: 600; font-size: 0.9375rem; }
+/* In person / online choice in the booking form: two cards side by side. */
+.field-label { margin: 0; font-weight: 600; font-size: 0.9375rem; }
+.meeting-options { grid-template-columns: 1fr 1fr; margin-top: 0; }
+.field .option { font-weight: 400; font-size: 1rem; }
+.field .option input { width: auto; padding: 0; }
 .field input, .field textarea {
   width: 100%; padding: 12px 14px; border: 1.5px solid var(--line-strong); border-radius: var(--radius-sm);
   font: inherit; font-size: 16px; color: var(--ink); background: var(--surface);

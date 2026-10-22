@@ -61,6 +61,14 @@ function cleanName(name) {
   return value;
 }
 
+// How the customer is served (bookings.meeting).
+const MEETINGS = ['in_person', 'online'];
+
+function cleanMeeting(meeting) {
+  if (!MEETINGS.includes(meeting)) throw new BookingError('meeting');
+  return meeting;
+}
+
 function cleanNote(note) {
   const value = String(note || '').trim().slice(0, 500);
   return value || null;
@@ -136,10 +144,11 @@ async function cancelOpenInvoices(bookingId) {
 // Reserves a slot for `hold_minutes` while the customer pays. Availability is
 // re-checked inside an IMMEDIATE transaction so two customers can never hold
 // the same slot.
-function createHold({ serviceId, date, time, name, phone, note, ip = null, now = Date.now() }) {
+function createHold({ serviceId, date, time, name, phone, note, meeting = 'in_person', ip = null, now = Date.now() }) {
   const customerName = cleanName(name);
   const customerPhone = normalizePhone(phone);
   if (!customerPhone) throw new BookingError('phone');
+  const meetingMode = cleanMeeting(meeting);
   if (!isValidDate(date)) throw new BookingError('date');
 
   const released = [];
@@ -176,6 +185,7 @@ function createHold({ serviceId, date, time, name, phone, note, ip = null, now =
       start_min: start,
       end_min: dayOnly ? 0 : start + service.duration_min,
       day_only: dayOnly ? 1 : 0,
+      meeting: meetingMode,
       customer_name: customerName,
       phone: customerPhone,
       note: cleanNote(note),
@@ -402,10 +412,23 @@ async function sendReminders(now = Date.now()) {
 
 // ── Admin actions ─────────────────────────────────────────
 
-function createManual({ serviceId, date, time, name, phone, note, paidAmount = 0, force = false, actor = 'admin', now = Date.now() }) {
+function createManual({
+  serviceId,
+  date,
+  time,
+  name,
+  phone,
+  note,
+  meeting = 'in_person',
+  paidAmount = 0,
+  force = false,
+  actor = 'admin',
+  now = Date.now(),
+}) {
   const customerName = cleanName(name);
   const customerPhone = normalizePhone(phone);
   if (!customerPhone) throw new BookingError('phone');
+  const meetingMode = cleanMeeting(meeting);
   if (!isValidDate(date)) throw new BookingError('date');
   const paid = Math.max(0, Math.round(Number(paidAmount) || 0));
 
@@ -427,6 +450,7 @@ function createManual({ serviceId, date, time, name, phone, note, paidAmount = 0
       start_min: start,
       end_min: end,
       day_only: dayOnly ? 1 : 0,
+      meeting: meetingMode,
       customer_name: customerName,
       phone: customerPhone,
       note: cleanNote(note),
@@ -524,6 +548,7 @@ function setAdminNote(id, note, actor = 'admin') {
 }
 
 export {  BookingError,
+  MEETINGS,
   getById,
   getByToken,
   getService,

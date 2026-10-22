@@ -54,7 +54,7 @@ export default async function PayPage({ params }) {
             expiresAt={booking.hold_expires_at}
             serverNow={Date.now()}
             amount={payment ? formatPrice(payment.amount) : ''}
-            bookingLine={`${booking.service_name} · ${formatWhen(booking)}`}
+            bookingLine={`${booking.service_name} · ${formatWhen(booking)}${booking.meeting === 'online' ? ` · ${t('book.meeting_online')}` : ''}`}
             code={booking.code}
             mock={qpay.isMock()}
             deeplinks={deeplinks

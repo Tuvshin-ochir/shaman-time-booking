@@ -16,6 +16,7 @@ export async function createBooking(formData) {
       name: field(formData.get('name')),
       phone: field(formData.get('phone')),
       note: field(formData.get('note')),
+      meeting: field(formData.get('meeting')) || 'in_person',
       paidAmount: field(formData.get('paid_amount')),
       force: checked(formData.get('force')),
       actor: admin.username,

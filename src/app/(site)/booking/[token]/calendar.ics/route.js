@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
           `DTEND:${icsTime(localToEpoch(booking.date, booking.end_min))}`,
         ]),
     `SUMMARY:${icsText(`${booking.service_name} — ${business.name}`)}`,
-    `LOCATION:${icsText(business.address)}`,
+    `LOCATION:${icsText(booking.meeting === 'online' ? 'Онлайн' : business.address)}`,
     `DESCRIPTION:${icsText(`${booking.code} · ${business.phone}`)}`,
     'BEGIN:VALARM',
     booking.day_only ? 'TRIGGER:-PT15H' : 'TRIGGER:-PT2H',

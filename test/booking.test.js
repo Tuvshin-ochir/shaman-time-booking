@@ -321,3 +321,31 @@ test('special services: only a day is chosen, any open day, and no time slot is 
   assert.equal(await bookings.sendReminders(localToEpoch(SUNDAY, 8 * 60 + 55)), 0);
   assert.equal(await bookings.sendReminders(localToEpoch(SUNDAY, 9 * 60 + 5)), 1);
 });
+
+test('in person or online: stored on the booking, required to be valid, and named in the SMS', () => {
+  resetSchedule();
+  const s = service(30);
+  const inPerson = hold(s, '09:00', '99110030');
+  assert.equal(inPerson.meeting, 'in_person'); // the default for callers that do not ask
+  const online = bookings.createHold({ serviceId: s.id, date: MONDAY, time: '09:30', name: 'Бат', phone: '99110031', meeting: 'online', now: NOW });
+  assert.equal(online.meeting, 'online');
+  assert.throws(
+    () => bookings.createHold({ serviceId: s.id, date: MONDAY, time: '10:30', name: 'Бат', phone: '99110032', meeting: 'video', now: NOW }),
+    { code: 'meeting' }
+  );
+  assert.equal(bookings.createManual({ serviceId: s.id, date: MONDAY, time: '11:00', name: 'Сүх', phone: '99110033', meeting: 'online', now: NOW }).meeting, 'online');
+
+  const confirm = settings.DEFAULTS.sms.templates.customer_confirm;
+  assert.match(notify.render(confirm, notify.vars(online)), /Цаг: 2030\.01\.07 09:30, онлайнаар\..*Хаяг: онлайн\./);
+  assert.match(notify.render(confirm, notify.vars(inPerson)), /Цаг: 2030\.01\.07 09:00, биеэр\./);
+});
+
+test('SMS texts saved unedited from an older default follow the new default; edited ones stay', () => {
+  const saved = settings.get('sms');
+  const old = '{business}: Захиалга баталгаажлаа. Цаг: {date} {time}. Нэр: {name}, утас: {phone}. Хаяг: {address}. Лавлах: {contact}';
+  settings.set('sms', { ...saved, templates: { ...saved.templates, customer_confirm: old, staff_new: 'Миний текст {date}' } });
+  assert.equal(settings.get('sms').templates.customer_confirm, settings.DEFAULTS.sms.templates.customer_confirm);
+  assert.match(settings.get('sms').templates.customer_confirm, /\{mode\}/);
+  assert.equal(settings.get('sms').templates.staff_new, 'Миний текст {date}');
+  settings.set('sms', saved);
+});

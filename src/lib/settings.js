@@ -32,12 +32,12 @@ const DEFAULTS = {
     staff_phones: '',
     reminders: true,
     transliterate: true,
-    // Placeholders: {business} {name} {phone} {date} {time} {service} {address} {contact} {code}
+    // Placeholders: {business} {name} {phone} {date} {time} {mode} {service} {address} {contact} {code}
     templates: {
       customer_confirm:
-        '{business}: Захиалга баталгаажлаа. Цаг: {date} {time}. Нэр: {name}, утас: {phone}. Хаяг: {address}. Лавлах: {contact}',
-      staff_new: 'Шинэ захиалга: {date} {time}. Нэр: {name}, утас: {phone}. {service}',
-      reminder: '{business}: Сануулга - маргааш {date} {time}-д таны цаг. Хаяг: {address}. Утас: {contact}',
+        '{business}: Захиалга баталгаажлаа. Цаг: {date} {time}, {mode}. Нэр: {name}, утас: {phone}. Хаяг: {address}. Лавлах: {contact}',
+      staff_new: 'Шинэ захиалга: {date} {time}, {mode}. Нэр: {name}, утас: {phone}. {service}',
+      reminder: '{business}: Сануулга - маргааш {date} {time}-д таны цаг ({mode}). Хаяг: {address}. Утас: {contact}',
       reschedule: '{business}: Таны цаг {date} {time} болж өөрчлөгдлөө. Код: {code}. Утас: {contact}',
       cancel: '{business}: Таны {date} {time}-ийн захиалга цуцлагдлаа. Лавлах: {contact}',
     },
@@ -74,6 +74,24 @@ const DEFAULTS = {
 
 const cache = shared('settingsCache', () => new Map());
 
+// Earlier default SMS texts. Saving the SMS settings stores every text, so a
+// stored text that still equals an old default was never edited and follows
+// the current default instead.
+const OLD_SMS_TEMPLATES = {
+  customer_confirm: [
+    '{business}: Захиалга баталгаажлаа. Цаг: {date} {time}. Нэр: {name}, утас: {phone}. Хаяг: {address}. Лавлах: {contact}',
+  ],
+  staff_new: ['Шинэ захиалга: {date} {time}. Нэр: {name}, утас: {phone}. {service}'],
+  reminder: ['{business}: Сануулга - маргааш {date} {time}-д таны цаг. Хаяг: {address}. Утас: {contact}'],
+};
+
+function upgradeSmsTemplates(sms) {
+  for (const [key, old] of Object.entries(OLD_SMS_TEMPLATES)) {
+    if (old.includes(sms.templates[key])) sms.templates[key] = DEFAULTS.sms.templates[key];
+  }
+  return sms;
+}
+
 function merge(defaults, stored) {
   if (Array.isArray(defaults)) {
     return defaults.map((d, i) => (stored && stored[i] !== undefined ? merge(d, stored[i]) : d));
@@ -93,7 +111,8 @@ function get(section) {
   if (!DEFAULTS[section]) throw new Error(`Unknown settings section: ${section}`);
   if (cache.has(section)) return cache.get(section);
   const row = db().prepare('SELECT value FROM settings WHERE key = ?').get(section);
-  const value = merge(DEFAULTS[section], row ? JSON.parse(row.value) : undefined);
+  let value = merge(DEFAULTS[section], row ? JSON.parse(row.value) : undefined);
+  if (section === 'sms') value = upgradeSmsTemplates(value);
   cache.set(section, value);
   return value;
 }
